@@ -13,21 +13,25 @@ The application consists of a single, straightforward HTML page with the followi
 ```html
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>Viral Clip Generator</title>
     <!-- CSS styles here -->
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>🔥 Viral Clip Generator</h1>
-        <p>Paste YouTube URL to create viral clips for TikTok/Reels/Shorts</p>
-        <input type="text" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." />
-        <button onclick="processVideo()">✨ Make Viral!</button>
-        <div class="loader" id="loader"></div>
-        <div class="result" id="result"></div>
+      <h1>🔥 Viral Clip Generator</h1>
+      <p>Paste YouTube URL to create viral clips for TikTok/Reels/Shorts</p>
+      <input
+        type="text"
+        id="youtubeUrl"
+        placeholder="https://www.youtube.com/watch?v=..."
+      />
+      <button onclick="processVideo()">✨ Make Viral!</button>
+      <div class="loader" id="loader"></div>
+      <div class="result" id="result"></div>
     </div>
     <!-- JavaScript code here -->
-</body>
+  </body>
 </html>
 ```
 
@@ -47,23 +51,23 @@ The application consists of a single, straightforward HTML page with the followi
 
 ```javascript
 async function processVideo() {
-    const url = document.getElementById('youtubeUrl').value;
-    if (!url) return alert('Please enter a YouTube URL');
-    const loader = document.getElementById('loader');
-    const resultDiv = document.getElementById('result');
-    loader.style.display = 'block';
-    resultDiv.innerHTML = '';
-    try {
-        const videoId = getYouTubeId(url);
-        if (!videoId) throw new Error('Invalid YouTube URL');
-        // Step 1: Download video (simulated)
-        const videoBuffer = await fetchVideo(videoId);
-        // Step 2: Find interesting moments (simulated)
-        const clip = await findInterestingMoments(videoBuffer);
-        // Step 3: Add sound effect (simulated)
-        const finalClip = await addSoundEffect(clip);
-        // Display result
-        resultDiv.innerHTML = `
+  const url = document.getElementById("youtubeUrl").value;
+  if (!url) return alert("Please enter a YouTube URL");
+  const loader = document.getElementById("loader");
+  const resultDiv = document.getElementById("result");
+  loader.style.display = "block";
+  resultDiv.innerHTML = "";
+  try {
+    const videoId = getYouTubeId(url);
+    if (!videoId) throw new Error("Invalid YouTube URL");
+    // Step 1: Download video (simulated)
+    const videoBuffer = await fetchVideo(videoId);
+    // Step 2: Find interesting moments (simulated)
+    const clip = await findInterestingMoments(videoBuffer);
+    // Step 3: Add sound effect (simulated)
+    const finalClip = await addSoundEffect(clip);
+    // Display result
+    resultDiv.innerHTML = `
             <h2>🎉 Your Viral Clip Is Ready!</h2>
             <video controls autoplay>
                 <source src="${finalClip}" type="video/mp4">
@@ -71,11 +75,11 @@ async function processVideo() {
             <p><a href="${finalClip}" download="viral-clip.mp4">💾 Download Clip</a></p>
             <p>Share directly to TikTok/Instagram/YouTube Shorts!</p>
         `;
-    } catch (error) {
-        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
-    } finally {
-        loader.style.display = 'none';
-    }
+  } catch (error) {
+    resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+  } finally {
+    loader.style.display = "none";
+  }
 }
 ```
 

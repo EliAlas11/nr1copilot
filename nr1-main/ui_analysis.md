@@ -18,12 +18,12 @@ The user interface consists of a single, clean page with the following elements:
 ### Main Page Styling
 
 ```css
-body { 
-    font-family: Arial, sans-serif; 
-    background: #f0f2f5; 
-    padding: 20px; 
-    max-width: 800px; 
-    margin: 0 auto; 
+body {
+  font-family: Arial, sans-serif;
+  background: #f0f2f5;
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
 }
 ```
 
@@ -34,11 +34,11 @@ body {
 ### Main Container Styling
 
 ```css
-.container { 
-    background: white; 
-    padding: 30px; 
-    border-radius: 15px; 
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+.container {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 ```
 
@@ -49,24 +49,25 @@ body {
 ### Input and Button Styling
 
 ```css
-input, button { 
-    padding: 12px; 
-    font-size: 16px; 
-    margin: 8px 0; 
-    border-radius: 8px; 
+input,
+button {
+  padding: 12px;
+  font-size: 16px;
+  margin: 8px 0;
+  border-radius: 8px;
 }
-input { 
-    width: 100%; 
-    border: 1px solid #ddd; 
-    box-sizing: border-box; 
+input {
+  width: 100%;
+  border: 1px solid #ddd;
+  box-sizing: border-box;
 }
-button { 
-    background: #ff0040; 
-    color: white; 
-    border: none; 
-    cursor: pointer; 
-    width: 100%; 
-    font-weight: bold; 
+button {
+  background: #ff0040;
+  color: white;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  font-weight: bold;
 }
 ```
 
@@ -78,14 +79,14 @@ button {
 ### Result Area Styling
 
 ```css
-.result { 
-    margin-top: 20px; 
-    text-align: center; 
+.result {
+  margin-top: 20px;
+  text-align: center;
 }
-video { 
-    width: 100%; 
-    border-radius: 8px; 
-    margin-top: 15px; 
+video {
+  width: 100%;
+  border-radius: 8px;
+  margin-top: 15px;
 }
 ```
 
@@ -97,18 +98,22 @@ video {
 
 ```css
 .loader {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #ff0040;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-    margin: 20px auto;
-    display: none;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #ff0040;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+  display: none;
 }
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 ```
 

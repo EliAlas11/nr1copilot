@@ -3,22 +3,23 @@
 ## 1. Frontend Optimizations
 
 ### Asynchronous CSS and JavaScript Loading
+
 ```javascript
 // Load CSS asynchronously
 const loadCSS = (href) => {
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
   link.href = href;
-  link.media = 'print';
+  link.media = "print";
   document.head.appendChild(link);
   link.onload = () => {
-    link.media = 'all';
+    link.media = "all";
   };
 };
 
 // Load JavaScript asynchronously
 const loadJS = (src, async = true, defer = true) => {
-  const script = document.createElement('script');
+  const script = document.createElement("script");
   script.src = src;
   script.async = async;
   script.defer = defer;
@@ -26,26 +27,34 @@ const loadJS = (src, async = true, defer = true) => {
   return script;
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   // Load icons asynchronously
-  loadCSS('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+  loadCSS(
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css",
+  );
   // Load additional JS after page load
   setTimeout(() => {
-    loadJS('/static/js/compatibility.js');
+    loadJS("/static/js/compatibility.js");
   }, 1000);
 });
 ```
 
 ### Image Compression and Lazy Loading
+
 ```html
 <!-- Use lazy loading for images -->
-<img src="placeholder.jpg" data-src="actual-image.jpg" loading="lazy" alt="Image description" />
+<img
+  src="placeholder.jpg"
+  data-src="actual-image.jpg"
+  loading="lazy"
+  alt="Image description"
+/>
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const lazyImages = document.querySelectorAll('img[data-src]');
-    if ('IntersectionObserver' in window) {
+  document.addEventListener("DOMContentLoaded", () => {
+    const lazyImages = document.querySelectorAll("img[data-src]");
+    if ("IntersectionObserver" in window) {
       const imageObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
+        entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const img = entry.target;
             img.src = img.dataset.src;
@@ -53,10 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
       });
-      lazyImages.forEach(img => imageObserver.observe(img));
+      lazyImages.forEach((img) => imageObserver.observe(img));
     } else {
       // Fallback for older browsers
-      lazyImages.forEach(img => {
+      lazyImages.forEach((img) => {
         img.src = img.dataset.src;
       });
     }
@@ -65,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
 ```
 
 ### CSS Delivery Optimization
+
 ```css
 /* Use will-change for elements that will change */
 .animated-element {
@@ -73,8 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* Avoid expensive properties in animations */
 @keyframes optimized-animation {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(100px); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(100px);
+  }
 }
 
 /* Use transform instead of left/top for animations */

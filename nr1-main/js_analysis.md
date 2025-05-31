@@ -16,32 +16,32 @@ The site code consists of several main functions working together to achieve the
 
 ```javascript
 async function processVideo() {
-    const url = document.getElementById('youtubeUrl').value;
-    if (!url) return alert('Please enter a YouTube URL');
-    
-    const loader = document.getElementById('loader');
-    const resultDiv = document.getElementById('result');
-    
-    // Show loader
-    loader.style.display = 'block';
-    resultDiv.innerHTML = '';
-    
-    try {
-        // Get YouTube video ID
-        const videoId = getYouTubeId(url);
-        if (!videoId) throw new Error('Invalid YouTube URL');
-        
-        // Step 1: Download video (simulated)
-        const videoBuffer = await fetchVideo(videoId);
-        
-        // Step 2: Find interesting moments (simulated)
-        const clip = await findInterestingMoments(videoBuffer);
-        
-        // Step 3: Add sound effect (simulated)
-        const finalClip = await addSoundEffect(clip);
-        
-        // Display result
-        resultDiv.innerHTML = `
+  const url = document.getElementById("youtubeUrl").value;
+  if (!url) return alert("Please enter a YouTube URL");
+
+  const loader = document.getElementById("loader");
+  const resultDiv = document.getElementById("result");
+
+  // Show loader
+  loader.style.display = "block";
+  resultDiv.innerHTML = "";
+
+  try {
+    // Get YouTube video ID
+    const videoId = getYouTubeId(url);
+    if (!videoId) throw new Error("Invalid YouTube URL");
+
+    // Step 1: Download video (simulated)
+    const videoBuffer = await fetchVideo(videoId);
+
+    // Step 2: Find interesting moments (simulated)
+    const clip = await findInterestingMoments(videoBuffer);
+
+    // Step 3: Add sound effect (simulated)
+    const finalClip = await addSoundEffect(clip);
+
+    // Display result
+    resultDiv.innerHTML = `
             <h2>🎉 Your Viral Clip Is Ready!</h2>
             <video controls autoplay>
                 <source src="${finalClip}" type="video/mp4">
@@ -49,12 +49,11 @@ async function processVideo() {
             <p><a href="${finalClip}" download="viral-clip.mp4">💾 Download Clip</a></p>
             <p>Share directly to TikTok/Instagram/YouTube Shorts!</p>
         `;
-        
-    } catch (error) {
-        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
-    } finally {
-        loader.style.display = 'none';
-    }
+  } catch (error) {
+    resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+  } finally {
+    loader.style.display = "none";
+  }
 }
 ```
 
@@ -77,13 +76,14 @@ This function is the entry point for video processing and works as follows:
 
 ```javascript
 function getYouTubeId(url) {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
 }
 ```
 
 This function uses a regular expression to extract the YouTube video ID from various URL formats, such as:
+
 - Standard watch links: `https://www.youtube.com/watch?v=VIDEO_ID`
 - Shortened share links: `https://youtu.be/VIDEO_ID`
 - Embed links: `https://www.youtube.com/embed/VIDEO_ID`
@@ -94,9 +94,9 @@ It checks that the extracted ID is 11 characters (the standard YouTube video ID 
 
 ```javascript
 async function fetchVideo(videoId) {
-    // In a real implementation, this would call your backend
-    // For demo, we'll simulate with a placeholder
-    return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  // In a real implementation, this would call your backend
+  // For demo, we'll simulate with a placeholder
+  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 }
 ```
 
@@ -106,16 +106,16 @@ This function simulates downloading a video from YouTube. In production, it woul
 
 ```javascript
 async function findInterestingMoments(video) {
-    // Simulated AI processing (would use real video analysis in production)
-    return new Promise(resolve => {
-        setTimeout(() => {
-            resolve({
-                start: 45,
-                duration: 15,
-                preview: video // using thumbnail for demo
-            });
-        }, 2000);
-    });
+  // Simulated AI processing (would use real video analysis in production)
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        start: 45,
+        duration: 15,
+        preview: video, // using thumbnail for demo
+      });
+    }, 2000);
+  });
 }
 ```
 
@@ -125,16 +125,16 @@ This function simulates AI-based video analysis to find the most interesting seg
 
 ```javascript
 async function addSoundEffect(clip) {
-    // Viral sound effects (would mix with video in production)
-    const sounds = [
-        "https://assets.mixkit.co/sfx/preview/mixkit-game-show-suspense-waiting-667.mp3",
-        "https://assets.mixkit.co/sfx/preview/mixkit-suspense-whoosh-1123.mp3",
-        "https://assets.mixkit.co/sfx/preview/mixkit-horror-ambience-493.mp3"
-    ];
-    // Random viral sound
-    const sound = sounds[Math.floor(Math.random() * sounds.length)];
-    // In production, this would return a processed video URL
-    return "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4";
+  // Viral sound effects (would mix with video in production)
+  const sounds = [
+    "https://assets.mixkit.co/sfx/preview/mixkit-game-show-suspense-waiting-667.mp3",
+    "https://assets.mixkit.co/sfx/preview/mixkit-suspense-whoosh-1123.mp3",
+    "https://assets.mixkit.co/sfx/preview/mixkit-horror-ambience-493.mp3",
+  ];
+  // Random viral sound
+  const sound = sounds[Math.floor(Math.random() * sounds.length)];
+  // In production, this would return a processed video URL
+  return "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4";
 }
 ```
 
