@@ -208,19 +208,52 @@ function setupGracefulShutdown(server) {
 }
 setupGracefulShutdown(server);
 
+// --- Utility: Colorized Banner (if chalk is available) ---
+let color = (txt) => txt;
+try {
+  const chalk = require('chalk');
+  color = (txt) => chalk.cyan(txt);
+} catch {}
+
+// --- Config Validation and Startup Summary Table ---
+const requiredEnvVars = [
+  'MONGO_URI',
+  'JWT_SECRET',
+  'REDIS_URL',
+];
+const missingVars = requiredEnvVars.filter((k) => !process.env[k]);
+if (missingVars.length) {
+  const warn = color ? chalk.yellow : (x) => x;
+  logWithTimestamp('warn', warn(`⚠️  Missing required environment variables: ${missingVars.join(', ')}`));
+}
+
+function printConfigSummary() {
+  const summary = [
+    ['Node.js', process.version],
+    ['Platform', process.platform],
+    ['Environment', process.env.NODE_ENV || 'development'],
+    ['Port', port],
+    ['Mongo URI', process.env.MONGO_URI ? '[set]' : '[not set]'],
+    ['Redis URL', process.env.REDIS_URL ? '[set]' : '[not set]'],
+    ['S3 Bucket', process.env.AWS_S3_BUCKET ? '[set]' : '[not set]'],
+    ['JWT Secret', process.env.JWT_SECRET ? '[set]' : '[not set]'],
+  ];
+  logWithTimestamp('info', color('--- Configuration Summary ---'));
+  for (const [k, v] of summary) {
+    logWithTimestamp('info', color(`${k.padEnd(14)}: ${v}`));
+  }
+  logWithTimestamp('info', color('-----------------------------'));
+}
+
 // --- Advanced Startup Diagnostics and Banner ---
 (async () => {
   const bootStart = Date.now();
   try {
-    logWithTimestamp('info', '==============================');
-    logWithTimestamp('info', '   🚀 Starting NR1 Copilot...   ');
-    logWithTimestamp('info', '==============================');
-    logWithTimestamp('info', `Environment: ${process.env.NODE_ENV || 'development'}`);
-    logWithTimestamp('info', `Port: ${port}`);
-    logWithTimestamp('info', `Mongo URI: ${process.env.MONGO_URI ? '[set]' : '[not set]'}`);
-    logWithTimestamp('info', `Redis URL: ${process.env.REDIS_URL ? '[set]' : '[not set]'}`);
-    logWithTimestamp('info', `S3 Bucket: ${process.env.AWS_S3_BUCKET ? '[set]' : '[not set]'}`);
-    logWithTimestamp('info', `JWT Secret: ${process.env.JWT_SECRET ? '[set]' : '[not set]'}`);
+    process.title = 'nr1copilot-backend';
+    logWithTimestamp('info', color('=============================='));
+    logWithTimestamp('info', color('   🚀 Starting NR1 Copilot...   '));
+    logWithTimestamp('info', color('=============================='));
+    printConfigSummary();
     await bootstrapServer({
       app,
       server,
@@ -232,8 +265,8 @@ setupGracefulShutdown(server);
       printDeprecationWarning: require('./utils/runtime').printDeprecationWarning,
     });
     const bootTime = ((Date.now() - bootStart) / 1000).toFixed(2);
-    logWithTimestamp('info', `🚀 Server bootstrap complete. Listening on port ${port}`);
-    logWithTimestamp('info', `Boot time: ${bootTime}s`);
+    logWithTimestamp('info', color(`🚀 Server bootstrap complete. Listening on port ${port}`));
+    logWithTimestamp('info', color(`Boot time: ${bootTime}s`));
   } catch (err) {
     logWithTimestamp('error', '❌ Fatal error during server bootstrap:', err);
     process.exit(1);
