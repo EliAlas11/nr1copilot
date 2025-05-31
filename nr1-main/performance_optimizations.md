@@ -1,3 +1,5 @@
+# This file is obsolete after migration to Python/FastAPI. Frontend performance optimizations for JavaScript/CSS are no longer relevant.
+
 # Performance Optimizations and Resource Usage Reduction
 
 ## 1. Frontend Optimizations

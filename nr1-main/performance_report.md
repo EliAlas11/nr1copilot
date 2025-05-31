@@ -1,5 +1,7 @@
 # Performance Improvement and Resource Usage Reduction Report
 
+# This file is obsolete after migration to Python/FastAPI. Frontend performance report for JavaScript/CSS is no longer relevant.
+
 ## Implemented Performance Enhancements
 
 1. **Partial Video Streaming**

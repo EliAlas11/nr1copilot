@@ -199,3 +199,5 @@ If deploying publicly, use a reverse proxy (like Nginx) to enable HTTPS.
 ---
 
 For more details, see the main README.md.
+
+# This file is obsolete after migration to Python/FastAPI. The deployment guide references Node.js/JavaScript and is no longer relevant.

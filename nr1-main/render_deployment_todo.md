@@ -7,3 +7,5 @@
 - [ ] Test compatibility locally before deployment
 - [ ] Prepare the final deployment package
 - [ ] Write a clear deployment guide for users
+
+# This file is obsolete after migration to Python/FastAPI. The deployment todo references Node.js/JavaScript and is no longer relevant.
