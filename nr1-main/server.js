@@ -662,7 +662,6 @@ app.get("/health", (req, res) => {
 });
 
 // --- Professional API stubs for new features ---
-const express = require('express');
 const router = express.Router();
 
 // User authentication (stub)
