@@ -2,14 +2,14 @@ services:
   - type: web
     name: viral-clip-generator
     env: node
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: cd nr1-main && npm install
+    startCommand: cd nr1-main && node server.js
     envVars:
       - key: NODE_ENV
         value: production
-    healthCheckPath: /
+    healthCheckPath: /health
     autoDeploy: true
     disk:
       name: viral-clips-data
-      mountPath: /opt/render/project/src/videos
+      mountPath: /opt/render/project/src/nr1-main/videos
       sizeGB: 1
