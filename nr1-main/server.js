@@ -8,13 +8,8 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const cors = require('cors');
 const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
-const rateLimit = require('express-rate-limit');
-const helmet = require('helmet');
-const winston = require('winston');
-const http = require('http');
 const { Server } = require('socket.io');
 const IORedis = require('ioredis');
 const { QueueEvents } = require('bullmq');
@@ -46,55 +41,18 @@ try {
 const app = express();
 const port = process.env.PORT || 5000;
 app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
-app.use(cors({
-  origin: true,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-}));
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  next();
-});
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", 'https:', 'blob:'],
-      styleSrc: ["'self'", 'https:', 'blob:'],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", 'wss:', 'https:'],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: [],
-    },
-  },
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  hsts: { maxAge: 31536000, includeSubDomains: true },
-}));
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: 'Too many requests from this IP, please try again later.', retryAfter: 15 * 60 },
-  standardHeaders: true,
-  legacyHeaders: false,
-  trustProxy: true,
-  keyGenerator: (req) => req.ip || req.connection.remoteAddress || 'unknown',
-  skip: (req) => req.path === '/health' || req.path.startsWith('/api/videos/') || req.method === 'OPTIONS',
-});
-// Remove generic /api limiter, use only advanced per-route limiters for best practice modularity
-// app.use('/api', limiter); // Removed
 
-// Add request logging for observability
-app.use((req, res, next) => {
-  logWithLevel('info', `[REQUEST]`, req.method, req.originalUrl, 'from', req.ip);
-  next();
-});
+// --- Modular Middleware and Config Attachments ---
+const { limiter, requestLogger, securityHeaders, helmetConfig } = require('./config/express');
+
+app.use(securityHeaders);
+app.use(helmet(helmetConfig));
+app.use(requestLogger);
+app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(compression());
+app.use(cors(require('./config/express').corsConfig));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use(express.static(path.join(__dirname, 'public')));
 const logStream = process.env.NODE_ENV === 'production' ? fs.createWriteStream(path.join(__dirname, 'server.log'), { flags: 'a' }) : null;
 if (logStream) app.use(morgan('combined', { stream: logStream }));
