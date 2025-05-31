@@ -108,6 +108,16 @@ app.use('/api/v1/feedback', feedbackRoutes);
 app.use('/api/v1/i18n', i18nRoutes);
 app.use('/api/v1/auth', authRoutes);
 
+// --- Catch-all 404 Handler (after all routes) ---
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Not Found',
+    requestId: req.id,
+    path: req.originalUrl,
+  });
+});
+
 // --- Global Error Handler ---
 app.use((err, req, res, next) => {
   logWithLevel('error', `Request ${req.id} failed:`, err);
@@ -128,13 +138,22 @@ videoQueueEvents.on('progress', ({ jobId, data }) => { io.emit(`job-progress-${j
 videoQueueEvents.on('completed', ({ jobId, returnvalue }) => { io.emit(`job-completed-${jobId}`, returnvalue); });
 videoQueueEvents.on('failed', ({ jobId, failedReason }) => { io.emit(`job-failed-${jobId}`, failedReason); });
 
-// --- Graceful Shutdown ---
+// --- Graceful Shutdown with In-Flight Request Draining ---
 function setupGracefulShutdown(server) {
-  const shutdown = () => {
+  let connections = new Set();
+  server.on('connection', (conn) => {
+    connections.add(conn);
+    conn.on('close', () => connections.delete(conn));
+  });
+  const shutdown = async () => {
     logWithLevel('info', 'Received shutdown signal, closing server...');
     server.close(() => {
       logWithLevel('info', 'HTTP server closed');
-      process.exit(0);
+      setTimeout(() => {
+        logWithLevel('info', `Force closing ${connections.size} open connections`);
+        for (const conn of connections) conn.destroy();
+        process.exit(0);
+      }, 5000);
     });
   };
   process.on('SIGTERM', shutdown);
@@ -142,9 +161,12 @@ function setupGracefulShutdown(server) {
 }
 setupGracefulShutdown(server);
 
-// --- Advanced Startup Diagnostics ---
+// --- Advanced Startup Diagnostics and Banner ---
 (async () => {
   try {
+    logWithLevel('info', '==============================');
+    logWithLevel('info', '   🚀 Starting NR1 Copilot...   ');
+    logWithLevel('info', '==============================');
     await bootstrapServer({
       app,
       server,
