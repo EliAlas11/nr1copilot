@@ -27,13 +27,34 @@ A modern, secure, scalable, and production-ready platform for video processing, 
 
 ## API Versioning
 
-All endpoints are now under `/api/v1/` (e.g., `/api/v1/user/signup`).
+All endpoints are now under `/api/v1/` (e.g., `/api/v1/user/signup`, `/api/v1/videos/:id`, `/api/v1/feedback`).
 
 ## User API
 
 - `POST /api/v1/user/signup` — Register a new user
 - `POST /api/v1/user/login` — Login and receive JWT
 - `GET /api/v1/user/me` — Get current user info (JWT required)
+
+## Video API
+
+- `GET /api/v1/videos/:id` — Stream processed video
+- `GET /api/v1/videos/sample` — Get sample video
+- `POST /api/v1/videos/process` — Queue video processing job
+- `GET /api/v1/videos/job/:jobId` — Get job status
+- `POST /api/v1/videos/validate` — Validate YouTube URL
+- `GET /api/v1/videos/info/:videoId` — Get video info
+
+## Feedback API
+
+- `POST /api/v1/feedback` — Submit feedback
+
+## Analytics API
+
+- `GET /api/v1/analytics` — Get analytics dashboard data
+
+## i18n API
+
+- `GET /api/v1/i18n/languages` — List supported languages
 
 ## API Docs
 

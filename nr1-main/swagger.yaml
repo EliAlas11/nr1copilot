@@ -1,86 +1,11 @@
 openapi: 3.0.0
 info:
-  title: Viral Clip Generator API
+  title: NR1 Main API
   version: 1.0.0
-  description: Professional API documentation for the Viral Clip Generator backend.
+  description: World-class video processing and user API
 servers:
-  - url: /api
+  - url: /api/v1
 paths:
-  /validate:
-    post:
-      summary: Validate a YouTube URL
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                url:
-                  type: string
-                  example: https://www.youtube.com/watch?v=abcdefghijk
-      responses:
-        '200':
-          description: Validation result
-  /info/{videoId}:
-    get:
-      summary: Get video info
-      parameters:
-        - in: path
-          name: videoId
-          required: true
-          schema:
-            type: string
-            example: abcdefghijk
-      responses:
-        '200':
-          description: Video info
-  /process:
-    post:
-      summary: Queue a video processing job
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                videoId:
-                  type: string
-                url:
-                  type: string
-      responses:
-        '200':
-          description: Job queued
-  /job/{jobId}:
-    get:
-      summary: Get job status
-      parameters:
-        - in: path
-          name: jobId
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Job status
-  /feedback:
-    post:
-      summary: Submit feedback
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                feedback:
-                  type: string
-                email:
-                  type: string
-      responses:
-        '200':
-          description: Feedback received
   /user/signup:
     post:
       summary: User signup
@@ -129,6 +54,123 @@ paths:
           description: User info
         '401':
           description: Unauthorized
+  /videos/{id}:
+    get:
+      summary: Stream processed video
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Video stream
+        '404':
+          description: Not found
+  /videos/sample:
+    get:
+      summary: Get sample video
+      responses:
+        '200':
+          description: Sample video
+        '404':
+          description: Not found
+  /videos/process:
+    post:
+      summary: Queue video processing job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                videoId:
+                  type: string
+                url:
+                  type: string
+      responses:
+        '200':
+          description: Job queued
+        '400':
+          description: Invalid input
+  /videos/job/{jobId}:
+    get:
+      summary: Get job status
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job status
+        '404':
+          description: Not found
+  /videos/validate:
+    post:
+      summary: Validate YouTube URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+      responses:
+        '200':
+          description: Validation result
+        '400':
+          description: Invalid input
+  /videos/info/{videoId}:
+    get:
+      summary: Get video info
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Video info
+        '400':
+          description: Invalid video ID
+  /feedback:
+    post:
+      summary: Submit feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                feedback:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Feedback received
+        '400':
+          description: Invalid input
+  /analytics:
+    get:
+      summary: Get analytics dashboard data
+      responses:
+        '200':
+          description: Analytics data
+  /i18n/languages:
+    get:
+      summary: List supported languages
+      responses:
+        '200':
+          description: Supported languages
 components:
   securitySchemes:
     bearerAuth:

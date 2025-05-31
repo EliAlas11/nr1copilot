@@ -684,38 +684,16 @@ app.get('/health', (req, res) => {
   });
 });
 
-// --- Professional API stubs for new features ---
-const router = express.Router();
+// Attach all v1 API routes for world-class versioning
+const videoRoutes = require('./routes/video-routes');
+const feedbackRoutes = require('./routes/feedback-routes');
+const analyticsRoutes = require('./routes/analytics-routes');
+const i18nRoutes = require('./routes/i18n-routes');
 
-// User authentication (stub)
-router.post('/api/auth/login', (req, res) => {
-  // TODO: Implement real authentication
-  res.json({ success: false, message: 'Login not implemented.' });
-});
-router.post('/api/auth/signup', (req, res) => {
-  // TODO: Implement real signup
-  res.json({ success: false, message: 'Signup not implemented.' });
-});
-
-// Analytics dashboard (stub)
-router.get('/api/analytics', (req, res) => {
-  // TODO: Return real analytics
-  res.json({ success: true, data: { totalClips: 0, users: 0, downloads: 0 } });
-});
-
-// Feedback (stub)
-router.post('/api/feedback', (req, res) => {
-  // TODO: Save feedback
-  res.json({ success: true, message: 'Feedback received (stub).' });
-});
-
-// Language/i18n (stub)
-router.get('/api/languages', (req, res) => {
-  res.json({ success: true, languages: ['en', 'es', 'fr', 'de', 'zh'] });
-});
-
-// Attach router to app
-app.use(router);
+app.use('/api/v1/videos', videoRoutes);
+app.use('/api/v1/feedback', feedbackRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/i18n', i18nRoutes);
 
 // --- Professional improvements start ---
 
