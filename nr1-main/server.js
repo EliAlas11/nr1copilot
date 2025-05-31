@@ -101,7 +101,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(compression());
 
 // Serve static files
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Ensure directories exist
 const videosDir = path.join(__dirname, "videos");
@@ -769,7 +769,7 @@ if (missingVars.length) {
 // 4. Restrict CORS in production
 const allowedOrigins = process.env.NODE_ENV === 'production'
   ? [process.env.CORS_ORIGIN || 'https://yourdomain.com']
-  : true;
+  : '*';
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
@@ -799,10 +799,10 @@ router.post('/api/feedback', (req, res) => {
   });
   const { error, value } = schema.validate(req.body);
   if (error) {
-    logger.warn('Invalid feedback input:', error.message);
-    return res.status(400).json({ success: false, error: error.message });
+    logger.warn('Invalid feedback input');
+    return res.status(400).json({ success: false, error: 'Invalid feedback input.' });
   }
-  // TODO: Save feedback
+  // TODO: Save feedback securely (do not log content)
   res.json({ success: true, message: 'Feedback received (stub).' });
 });
 
