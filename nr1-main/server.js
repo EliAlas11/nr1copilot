@@ -12,6 +12,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const IORedis = require('ioredis');
 const { QueueEvents } = require('bullmq');
+const morgan = require('morgan');
 
 // Set FFmpeg path with error handling
 try {
