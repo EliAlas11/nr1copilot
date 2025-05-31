@@ -72,3 +72,38 @@ MIT
 
 - `REDIS_URL`: Redis connection string
 - `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET`: AWS S3 configuration
+
+# Viral Clip Generator – Professional Features
+
+## New Features (2025)
+
+- User Account System (Login/Signup UI, backend stubs)
+- Analytics Dashboard (UI, backend stub)
+- Advanced Clip Customization (UI modal, backend stub)
+- Social Sharing Integration (improved ARIA, platform buttons)
+- Accessibility & Internationalization (language selector, ARIA)
+- Tutorials & Help Center (help modal/FAQ)
+- Security & Privacy (privacy policy modal, TOS)
+- Performance & Offline (PWA prompt, offline notice)
+- Feedback & Support (feedback modal, backend stub)
+- SEO & Marketing (Open Graph/meta tags, blog/news link)
+
+## API Endpoints (Stubs)
+
+- `POST /api/auth/login` – User login (not implemented)
+- `POST /api/auth/signup` – User signup (not implemented)
+- `GET /api/analytics` – Analytics dashboard data (stub)
+- `POST /api/feedback` – Submit feedback (stub)
+- `GET /api/languages` – Supported languages (stub)
+- `POST /api/customize` – Advanced clip customization (stub)
+- `GET /api/dashboard` – User dashboard analytics (stub)
+
+## Future Plans
+- Implement secure authentication (JWT, OAuth)
+- Real analytics and user dashboards
+- Full i18n and language switching
+- Advanced video customization and preview
+- Persistent user feedback and support system
+
+---
+See `/index.html` for all UI/UX improvements and `/server.js`, `/routes/video-routes.js` for backend stubs.

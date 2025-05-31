@@ -90,5 +90,17 @@ router.get("/videos/job/:jobId", async (req, res) => {
   }
 });
 
+// Advanced clip customization (stub)
+router.post('/customize', (req, res) => {
+  // TODO: Implement real customization logic
+  res.json({ success: false, message: 'Customization not implemented.' });
+});
+
+// Dashboard analytics (stub)
+router.get('/dashboard', (req, res) => {
+  // TODO: Return real dashboard data
+  res.json({ success: true, data: { userStats: {}, clipStats: {} } });
+});
+
 // Export the router for use in the main server
 module.exports = router;
