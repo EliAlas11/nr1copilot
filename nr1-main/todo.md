@@ -1,11 +1,11 @@
-# قائمة المهام لإصلاح مشكلة معاينة وتنزيل الفيديو
+# TODO List: Video Preview and Download Issue Resolution
 
-- [x] تحليل سبب المشكلة في معاينة وتنزيل الفيديو
-- [x] إنشاء هيكل المجلدات اللازمة لتخزين الفيديوهات
-- [x] تعديل الكود البرمجي لربط الواجهة بخدمات backend فعلية
-- [x] إضافة خدمة API بسيطة لتقديم ملفات الفيديو
-- [x] تحسين التوافق مع أجهزة iPhone وSafari
-- [x] إصلاح مسارات الملفات في خادم Node.js
-- [x] اختبار الحل على مختلف الأجهزة والمتصفحات
-- [x] تحسين الأداء وتقليل استهلاك الموارد
-- [x] نشر الموقع للتجربة عبر رابط مؤقت
+- [x] Analyze the root cause of the video preview and download issue
+- [x] Create the necessary folder structure for video storage
+- [x] Update the code to connect the frontend with real backend services
+- [x] Add a simple API service to serve video files
+- [x] Improve compatibility with iPhone and Safari
+- [x] Fix file path issues in the Node.js server
+- [x] Test the solution on various devices and browsers
+- [x] Optimize performance and reduce resource usage
+- [x] Deploy the site for public testing via a temporary link
