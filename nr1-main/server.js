@@ -1,17 +1,17 @@
-const express = require("express");
-const path = require("path");
-const cors = require("cors");
-const fs = require("fs");
-const ytdl = require("ytdl-core");
-const ffmpeg = require("fluent-ffmpeg");
-const rateLimit = require("express-rate-limit");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const videoQueue = require("./queue/videoQueue");
-const http = require("http");
-const { Server } = require("socket.io");
-const { QueueEvents } = require("bullmq");
-const IORedis = require("ioredis");
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const fs = require('fs');
+const ytdl = require('ytdl-core');
+const ffmpeg = require('fluent-ffmpeg');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const winston = require('winston');
+const Joi = require('joi');
+const http = require('http');
+const { Server } = require('socket.io');
+const IORedis = require('ioredis');
+const { QueueEvents } = require('bullmq');
 
 // Set FFmpeg path with error handling
 try {
@@ -126,6 +126,52 @@ const logStream =
 if (logStream) {
   app.use(morgan("combined", { stream: logStream }));
 }
+
+// ENVIRONMENT VALIDATION
+const requiredEnv = [
+  // Add more as needed
+  // 'AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_S3_BUCKET',
+];
+const missingEnv = requiredEnv.filter((k) => !process.env[k]);
+if (missingEnv.length) {
+  console.warn('⚠️ Missing required environment variables:', missingEnv.join(', '));
+}
+
+// REDIS/S3/FFMPEG HEALTH CHECKS
+function checkDependencies() {
+  const checks = {};
+  // Redis
+  try {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    const redis = new IORedis(redisUrl);
+    checks.redis = 'connecting';
+    redis.ping().then(() => {
+      checks.redis = 'ok';
+      redis.disconnect();
+    }).catch(() => {
+      checks.redis = 'unreachable';
+      redis.disconnect();
+    });
+  } catch (e) { checks.redis = 'error'; }
+  // S3
+  try {
+    if (process.env.AWS_S3_BUCKET) {
+      checks.s3 = 'configured';
+    } else {
+      checks.s3 = 'missing';
+    }
+  } catch (e) { checks.s3 = 'error'; }
+  // FFmpeg
+  try {
+    ffmpeg.getAvailableFormats((err) => {
+      checks.ffmpeg = err ? 'error' : 'ok';
+    });
+  } catch (e) { checks.ffmpeg = 'error'; }
+  return checks;
+}
+app.get('/health/dependencies', async (req, res) => {
+  res.json(checkDependencies());
+});
 
 // Enhanced YouTube URL validation
 function extractVideoId(url) {
@@ -487,12 +533,22 @@ app.get("/api/info/:videoId", async (req, res) => {
 // Main processing endpoint (now queues job)
 app.post("/api/process", async (req, res) => {
   try {
-    let videoId = req.body.videoId;
-    const { url } = req.body;
+    const schema = Joi.object({
+      videoId: Joi.string().length(11).optional(),
+      url: Joi.string().uri().optional(),
+    });
+    const { error, value } = schema.validate(req.body);
+    if (error) {
+      logger.warn(`Invalid input: ${error.message}`);
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    let videoId = value.videoId;
+    const { url } = value;
     if (url && !videoId) {
       videoId = extractVideoId(url);
     }
-    if (!videoId) {
+    if (!videoId || typeof videoId !== 'string' || videoId.length !== 11) {
+      logger.warn('Invalid YouTube URL or video ID');
       return res.status(400).json({
         success: false,
         error: "Valid YouTube URL or video ID is required",
@@ -502,7 +558,7 @@ app.post("/api/process", async (req, res) => {
     const job = await videoQueue.add("process", { videoId, url });
     res.json({ success: true, jobId: job.id });
   } catch (error) {
-    console.error("❌ Failed to queue video processing job:", error);
+    logger.error(`Failed to queue video processing job: ${error.message}`);
     res
       .status(500)
       .json({ success: false, error: "Failed to queue video processing job" });
@@ -692,6 +748,19 @@ const advancedLimiter = rateLimit({
   },
 });
 app.use("/api/process", advancedLimiter);
+
+// Setup winston logger
+const logger = winston.createLogger({
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`)
+  ),
+  transports: [
+    new winston.transports.Console(),
+    ...(process.env.NODE_ENV === 'production' ? [new winston.transports.File({ filename: 'server.log' })] : [])
+  ]
+});
 
 // Start server
 server.listen(port, () => {

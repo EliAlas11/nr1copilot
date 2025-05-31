@@ -25,5 +25,6 @@ ffmpeg(workerData.inputPath)
   })
   .on("error", (err) => {
     parentPort.postMessage({ status: "error", error: err.message });
+    // TODO: Add alerting/monitoring for worker errors
   })
   .save(workerData.outputPath);

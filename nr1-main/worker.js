@@ -7,9 +7,27 @@ const fs = require("fs");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { Worker: NodeWorker } = require("worker_threads");
 
-const connection = new IORedis(
-  process.env.REDIS_URL || "redis://localhost:6379",
-);
+
+// ENVIRONMENT VALIDATION
+const requiredEnv = [
+  // 'AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_S3_BUCKET',
+];
+const missingEnv = requiredEnv.filter((k) => !process.env[k]);
+if (missingEnv.length) {
+  console.warn('⚠️ Missing required environment variables:', missingEnv.join(', '));
+}
+
+// Harden Redis connection
+let connection;
+try {
+  connection = new IORedis(process.env.REDIS_URL || "redis://localhost:6379");
+  connection.on('error', (err) => {
+    console.warn('⚠️ Redis connection error:', err.message);
+  });
+} catch (e) {
+  console.error('❌ Failed to connect to Redis:', e.message);
+  // TODO: Add fallback or degrade gracefully
+}
 
 const videosDir = path.join(__dirname, "videos");
 const processedDir = path.join(videosDir, "processed");
@@ -105,5 +123,18 @@ worker.on("completed", (job) => {
 worker.on("failed", (job, err) => {
   console.error(`Job ${job.id} failed:`, err);
 });
+
+// Top-level error handler
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+  // TODO: Add alerting/monitoring here
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('❌ Unhandled Rejection:', reason);
+  // TODO: Add alerting/monitoring here
+});
+
+// TODO: Add retry logic for failed jobs
+// TODO: Add monitoring/alerting hooks
 
 module.exports = worker;
