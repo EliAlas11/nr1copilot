@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import List
+import logging
 
 load_dotenv()
 
@@ -35,3 +36,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = Field(default_factory=lambda: parse_cors_origins(os.getenv("CORS_ORIGINS", "*")))
 
 settings = Settings()
+
+logging.basicConfig(level=logging.INFO)
+logging.info(f"ENV: {settings.ENV}")
+logging.info(f"PORT: {settings.PORT}")
+logging.info(f"CORS_ORIGINS: {settings.CORS_ORIGINS}")
+logging.info(f"VIDEO_STORAGE_PATH: {settings.VIDEO_STORAGE_PATH}")
