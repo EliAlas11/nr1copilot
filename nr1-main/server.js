@@ -1,3 +1,9 @@
+// --- NR1 Copilot Professional Backend ---
+// This file is auto-cleaned and maintained for best practices.
+// Use app.js as the main entry point for new features and routes.
+//
+// For maintainers: Always use logWithLevel for logging, keep all security, audit, and modularization best practices.
+
 require('dotenv').config();
 
 const express = require('express');
@@ -26,117 +32,77 @@ const userRoutes = require('./routes/v1/user-routes');
 try {
   const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
   ffmpeg.setFfmpegPath(ffmpegPath);
-  // console.log("✅ FFmpeg configured successfully");
   logWithLevel('info', '✅ FFmpeg configured successfully');
 } catch {
-  // console.warn("⚠️ FFmpeg installer not found, using system FFmpeg");
   logWithLevel('warn', '⚠️ FFmpeg installer not found, using system FFmpeg');
-  // Will use system FFmpeg if available
 }
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Enhanced trust proxy configuration for Replit
 app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
-
-// CORS configuration
-app.use(
-  cors({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  }),
-);
-
-// Security headers
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}));
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 });
-
-// Use Helmet for additional security headers
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", 'https:', 'blob:'],
-        styleSrc: ["'self'", 'https:', 'blob:'],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'wss:', 'https:'],
-        objectSrc: ["'none'"],
-        upgradeInsecureRequests: [],
-      },
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", 'https:', 'blob:'],
+      styleSrc: ["'self'", 'https:', 'blob:'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'wss:', 'https:'],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
     },
-    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-    hsts: { maxAge: 31536000, includeSubDomains: true },
-  }),
-);
-
-// --- Swagger API Docs ---
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
-// Fixed rate limiting for Replit environment
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // increased limit for development
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-    retryAfter: 15 * 60,
   },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hsts: { maxAge: 31536000, includeSubDomains: true },
+}));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: 'Too many requests from this IP, please try again later.', retryAfter: 15 * 60 },
   standardHeaders: true,
   legacyHeaders: false,
   trustProxy: true,
-  keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress || 'unknown';
-  },
-  skip: (req) => {
-    return (
-      req.path === '/health' || req.path.startsWith('/api/videos/') || req.method === 'OPTIONS'
-    );
-  },
+  keyGenerator: (req) => req.ip || req.connection.remoteAddress || 'unknown',
+  skip: (req) => req.path === '/health' || req.path.startsWith('/api/videos/') || req.method === 'OPTIONS',
 });
-
 app.use('/api', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
-
-// Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Ensure directories exist
 const videosDir = path.join(__dirname, 'videos');
 const processedDir = path.join(videosDir, 'processed');
 const tempDir = path.join(videosDir, 'temp');
-
 [videosDir, processedDir, tempDir].forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
-
-// Clean up old files
 function cleanupOldFiles() {
   const now = Date.now();
   const oneHour = 60 * 60 * 1000;
-
   [processedDir, tempDir].forEach((dir) => {
     fs.readdir(dir, (err, files) => {
       if (err) return;
-
       files.forEach((file) => {
         const filePath = path.join(dir, file);
         fs.stat(filePath, (err, stats) => {
           if (err) return;
-
           if (now - stats.mtime.getTime() > oneHour) {
             fs.unlink(filePath, (err) => {
-              if (!err) console.log(`🧹 Cleaned up old file: ${file}`);
+              if (!err) logWithLevel('info', `🧹 Cleaned up old file: ${file}`);
             });
           }
         });
@@ -144,87 +110,38 @@ function cleanupOldFiles() {
     });
   });
 }
-
 setInterval(cleanupOldFiles, 30 * 60 * 1000);
-
-// Log errors to a file in production
-const logStream =
-  process.env.NODE_ENV === 'production'
-    ? fs.createWriteStream(path.join(__dirname, 'server.log'), { flags: 'a' })
-    : null;
-if (logStream) {
-  app.use(morgan('combined', { stream: logStream }));
-}
-
-// ENVIRONMENT VALIDATION
-const requiredEnv = [
-  // Add more as needed
-  // 'AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_S3_BUCKET',
-];
+const logStream = process.env.NODE_ENV === 'production' ? fs.createWriteStream(path.join(__dirname, 'server.log'), { flags: 'a' }) : null;
+if (logStream) app.use(morgan('combined', { stream: logStream }));
+const requiredEnv = [];
 const missingEnv = requiredEnv.filter((k) => !process.env[k]);
-if (missingEnv.length) {
-  // console.warn('⚠️ Missing required environment variables:', missingEnv.join(', '));
-  logWithLevel('warn', '⚠️ Missing required environment variables:', missingEnv.join(', '));
-}
-
-// REDIS/S3/FFMPEG HEALTH CHECKS
+if (missingEnv.length) logWithLevel('warn', '⚠️ Missing required environment variables:', missingEnv.join(', '));
 function checkDependencies() {
   const checks = {};
-  // Redis
   try {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
     const redis = new IORedis(redisUrl);
     checks.redis = 'connecting';
-    redis
-      .ping()
-      .then(() => {
-        checks.redis = 'ok';
-        redis.disconnect();
-      })
-      .catch(() => {
-        checks.redis = 'unreachable';
-        redis.disconnect();
-      });
-  } catch (e) {
-    checks.redis = 'error';
-  }
-  // S3
-  try {
-    if (process.env.AWS_S3_BUCKET) {
-      checks.s3 = 'configured';
-    } else {
-      checks.s3 = 'missing';
-    }
-  } catch (e) {
-    checks.s3 = 'error';
-  }
-  // FFmpeg
-  try {
-    ffmpeg.getAvailableFormats((err) => {
-      checks.ffmpeg = err ? 'error' : 'ok';
+    redis.ping().then(() => {
+      checks.redis = 'ok';
+      redis.disconnect();
+    }).catch(() => {
+      checks.redis = 'unreachable';
+      redis.disconnect();
     });
-  } catch (e) {
-    checks.ffmpeg = 'error';
-  }
+  } catch (e) { checks.redis = 'error'; }
+  try {
+    if (process.env.AWS_S3_BUCKET) checks.s3 = 'configured';
+    else checks.s3 = 'missing';
+  } catch (e) { checks.s3 = 'error'; }
+  try {
+    ffmpeg.getAvailableFormats((err) => { checks.ffmpeg = err ? 'error' : 'ok'; });
+  } catch (e) { checks.ffmpeg = 'error'; }
   return checks;
 }
-app.get('/health/dependencies', async (req, res) => {
-  res.json(checkDependencies());
-});
-
-// --- Utility: Async Route Wrapper ---
-function asyncHandler(fn) {
-  return function (req, res, next) {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-}
-
-// --- Utility: Standard Error Response ---
-function errorResponse(res, status, message) {
-  return res.status(status).json({ success: false, error: message });
-}
-
-// --- Modularize Video ID Extraction ---
+app.get('/health/dependencies', async (req, res) => { res.json(checkDependencies()); });
+function asyncHandler(fn) { return function (req, res, next) { Promise.resolve(fn(req, res, next)).catch(next); }; }
+function errorResponse(res, status, message) { return res.status(status).json({ success: false, error: message }); }
 function extractVideoId(url) {
   try {
     if (!url || typeof url !== 'string') return null;
@@ -245,93 +162,63 @@ function extractVideoId(url) {
     }
     return null;
   } catch (error) {
-    logger.error('Video ID extraction error:', error.message);
+    logWithLevel('error', 'Video ID extraction error:', error.message);
     return null;
   }
 }
-
-// Enhanced video info retrieval with better error handling
 async function getVideoInfo(videoId) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
-      // console.log("⏰ Video info timeout for:", videoId);
       logWithLevel('info', '⏰ Video info timeout for:', videoId);
       reject(new Error('Request timeout - video may be unavailable'));
     }, 30000);
-
     try {
       const url = `https://www.youtube.com/watch?v=${videoId}`;
-      // console.log("🔍 Getting video info for:", videoId, "URL:", url);
       logWithLevel('info', '🔍 Getting video info for:', videoId, 'URL:', url);
-
       if (!videoId || videoId.length !== 11 || !/^[a-zA-Z0-9_-]+$/.test(videoId)) {
         clearTimeout(timeout);
-        // console.error("❌ Invalid video ID format:", videoId);
         logWithLevel('error', '❌ Invalid video ID format:', videoId);
         reject(new Error('Invalid video ID format'));
         return;
       }
-
-      // First validate the URL
       try {
         if (!ytdl.validateURL(url)) {
           clearTimeout(timeout);
-          // console.error("❌ Invalid YouTube URL:", url);
           logWithLevel('error', '❌ Invalid YouTube URL:', url);
           reject(new Error('Invalid YouTube URL'));
           return;
         }
       } catch (validateError) {
         clearTimeout(timeout);
-        // console.error("❌ URL validation error:", validateError);
         logWithLevel('error', '❌ URL validation error:', validateError);
         reject(new Error('Failed to validate YouTube URL: ' + validateError.message));
         return;
       }
-
-      // console.log("✅ URL validation passed, getting info...");
       logWithLevel('info', '✅ URL validation passed, getting info...');
-
-      ytdl
-        .getInfo(url, {
-          requestOptions: {
-            headers: {
-              'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept-Language': 'en-US,en;q=0.9',
-            },
+      ytdl.getInfo(url, {
+        requestOptions: {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           },
-        })
+        },
+      })
         .then((info) => {
           clearTimeout(timeout);
-          // console.log("📄 Raw video info received");
-          logWithLevel('info', '📄 Raw video info received');
-
           if (!info || !info.videoDetails) {
-            // console.error("❌ No video details in response");
             logWithLevel('error', '❌ No video details in response');
             reject(new Error('Invalid video information received'));
             return;
           }
-
           const duration = parseInt(info.videoDetails.lengthSeconds) || 0;
-          // console.log("⏱️ Video duration:", duration, "seconds");
           logWithLevel('info', '⏱️ Video duration:', duration, 'seconds');
-
-          if (duration > MAX_DURATION_SEC) {
-            reject(
-              new Error(`Video is too long. Maximum duration is ${MAX_DURATION_SEC / 60} minutes.`),
-            );
+          if (duration > 60 * 15) {
+            reject(new Error('Video is too long. Maximum duration is 15 minutes.'));
             return;
           }
-
-          if (duration < MIN_DURATION_SEC) {
-            reject(
-              new Error(`Video is too short. Minimum duration is ${MIN_DURATION_SEC} seconds.`),
-            );
+          if (duration < 10) {
+            reject(new Error('Video is too short. Minimum duration is 10 seconds.'));
             return;
           }
-
           const result = {
             title: info.videoDetails.title || 'Unknown Title',
             duration: duration,
@@ -340,33 +227,21 @@ async function getVideoInfo(videoId) {
             viewCount: info.videoDetails.viewCount || '0',
             author: info.videoDetails.author?.name || 'Unknown Author',
           };
-
-          // console.log("✅ Video info retrieved successfully:", result.title);
           logWithLevel('info', '✅ Video info retrieved successfully:', result.title);
           resolve(result);
         })
         .catch((error) => {
           clearTimeout(timeout);
-          // console.error("❌ ytdl.getInfo error:", error);
-
+          logWithLevel('error', '❌ ytdl.getInfo error:', error);
           let errorMessage = 'Failed to get video information';
-
-          // Handle both error objects and strings
-          const errorString = error
-            ? error.message || error.toString() || JSON.stringify(error)
-            : 'Unknown error';
-          // console.error("❌ Error details:", errorString);
+          const errorString = error ? error.message || error.toString() || JSON.stringify(error) : 'Unknown error';
           logWithLevel('error', '❌ Error details:', errorString);
-
           if (errorString) {
             if (errorString.includes('Video unavailable') || errorString.includes('unavailable')) {
               errorMessage = 'Video is unavailable, private, or deleted';
             } else if (errorString.includes('Sign in') || errorString.includes('age')) {
               errorMessage = 'Age-restricted video - cannot access';
-            } else if (
-              errorString.includes('This video is not available') ||
-              errorString.includes('not available')
-            ) {
+            } else if (errorString.includes('This video is not available') || errorString.includes('not available')) {
               errorMessage = 'Video is not available in this region';
             } else if (errorString.includes('Private video') || errorString.includes('private')) {
               errorMessage = 'This is a private video';
@@ -384,560 +259,35 @@ async function getVideoInfo(videoId) {
           } else {
             errorMessage = 'Unknown error occurred while getting video information';
           }
-
           reject(new Error(errorMessage));
         });
     } catch (error) {
       clearTimeout(timeout);
-      // console.error("❌ Video info setup error:", error);
       logWithLevel('error', '❌ Video info setup error:', error);
-      reject(
-        new Error('Failed to initialize video info request: ' + (error.message || 'Unknown error')),
-      );
+      reject(new Error('Failed to initialize video info request: ' + (error.message || 'Unknown error')));
     }
   });
 }
-
-// API Routes
-
-// Enhanced validation endpoint
-app.post('/api/validate', async (req, res) => {
-  try {
-    const { url } = req.body;
-
-    if (!url) {
-      return res.status(400).json({
-        success: false,
-        error: 'URL is required',
-      });
-    }
-
-    // console.log("🔍 Validating URL:", url);
-    logWithLevel('info', '🔍 Validating URL:', url);
-
-    const videoId = extractVideoId(url);
-
-    if (!videoId) {
-      return res.json({
-        success: true,
-        isValid: false,
-        videoId: null,
-        error: 'Invalid YouTube URL format',
-      });
-    }
-
-    // Test if video is accessible
-    let canAccess = false;
-    let accessError = null;
-
-    try {
-      const testUrl = `https://www.youtube.com/watch?v=${videoId}`;
-
-      // First check URL validity
-      let isValid = false;
-      try {
-        isValid = ytdl.validateURL(testUrl);
-      } catch (validateError) {
-        // console.warn("⚠️ URL validation failed:", validateError);
-        logWithLevel('warn', '⚠️ URL validation failed:', validateError);
-        accessError = 'Invalid YouTube URL format';
-      }
-
-      if (isValid) {
-        try {
-          await ytdl.getBasicInfo(testUrl, {
-            requestOptions: {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              },
-            },
-          });
-          canAccess = true;
-        } catch (basicInfoError) {
-          // console.warn("⚠️ Basic info fetch failed:", basicInfoError);
-          logWithLevel('warn', '⚠️ Basic info fetch failed:', basicInfoError);
-          if (basicInfoError && basicInfoError.message) {
-            if (basicInfoError.message.includes('Video unavailable')) {
-              accessError = 'Video is unavailable, private, or deleted';
-            } else if (basicInfoError.message.includes('Sign in')) {
-              accessError = 'Age-restricted video - cannot process';
-            } else {
-              accessError = 'Video may not be accessible: ' + basicInfoError.message;
-            }
-          } else {
-            accessError = 'Video may not be accessible (unknown error)';
-          }
-        }
-      }
-    } catch (testError) {
-      // console.warn("⚠️ Video access test failed:", testError);
-      logWithLevel('warn', '⚠️ Video access test failed:', testError);
-      accessError = 'Failed to test video accessibility: ' + (testError.message || 'Unknown error');
-    }
-
-    res.json({
-      success: true,
-      isValid: canAccess,
-      videoId: videoId,
-      canAccess,
-      warning: accessError,
-    });
-  } catch (error) {
-    // console.error("❌ Validation error:", error);
-    logWithLevel('error', '❌ Validation error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Validation failed: ' + (error.message || 'Unknown error'),
-    });
-  }
-});
-
-// Video info endpoint
-app.get('/api/info/:videoId', async (req, res) => {
-  try {
-    const { videoId } = req.params;
-
-    if (!videoId || videoId.length !== 11) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid video ID format',
-      });
-    }
-
-    // console.log("📄 Getting info for video ID:", videoId);
-    logWithLevel('info', '📄 Getting info for video ID:', videoId);
-    const info = await getVideoInfo(videoId);
-
-    res.json({
-      success: true,
-      ...info,
-    });
-  } catch (error) {
-    // console.error(
-    //   "❌ Video info error for ID:",
-    //   req.params.videoId,
-    //   "Error:",
-    //   error,
-    // );
-
-    let statusCode = 500;
-    let errorMessage = 'Failed to get video information';
-
-    if (error && error.message) {
-      errorMessage = error.message;
-      if (error.message.includes('unavailable') || error.message.includes('private')) {
-        statusCode = 404;
-      } else if (error.message.includes('too long') || error.message.includes('too short')) {
-        statusCode = 400;
-      } else if (error.message.includes('timeout')) {
-        statusCode = 408;
-      }
-    } else {
-      // console.error("❌ Empty error object received");
-      logWithLevel('error', '❌ Empty error object received');
-      errorMessage = 'Unknown error occurred while getting video information';
-    }
-
-    res.status(statusCode).json({
-      success: false,
-      error: errorMessage,
-    });
-  }
-});
-
-// Main processing endpoint (now queues job)
-app.post('/api/process', async (req, res) => {
-  try {
-    if (!videoQueue) {
-      logger.error('Queue unavailable: Redis is not connected.');
-      return res
-        .status(503)
-        .json({ success: false, error: 'Queue unavailable: Redis is not connected.' });
-    }
-    const schema = Joi.object({
-      videoId: Joi.string().length(11).optional(),
-      url: Joi.string().uri().optional(),
-    });
-    const { error, value } = schema.validate(req.body);
-    if (error) {
-      logger.warn(`Invalid input: ${error.message}`);
-      return res.status(400).json({ success: false, error: error.message });
-    }
-    let videoId = value.videoId;
-    const { url } = value;
-    if (url && !videoId) {
-      videoId = extractVideoId(url);
-    }
-    if (!videoId || typeof videoId !== 'string' || videoId.length !== 11) {
-      logger.warn('Invalid YouTube URL or video ID');
-      return res.status(400).json({
-        success: false,
-        error: 'Valid YouTube URL or video ID is required',
-      });
-    }
-    // Add job to BullMQ queue
-    const job = await videoQueue.add('process', { videoId, url });
-    res.json({ success: true, jobId: job.id });
-  } catch (error) {
-    logger.error(`Failed to queue video processing job: ${error.message}`);
-    res.status(500).json({ success: false, error: 'Failed to queue video processing job' });
-  }
-});
-
-// Job status endpoint
-app.get('/api/job/:jobId', async (req, res) => {
-  try {
-    if (!videoQueue) {
-      logger.error('Queue unavailable: Redis is not connected.');
-      return res.status(503).json({ error: 'Queue unavailable: Redis is not connected.' });
-    }
-    const job = await videoQueue.getJob(req.params.jobId);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-    const state = await job.getState();
-    const progress = job._progress || 0;
-    res.json({
-      jobId: job.id,
-      state,
-      progress,
-      result: job.returnvalue || null,
-      failedReason: job.failedReason || null,
-    });
-  } catch {
-    res.status(500).json({ error: 'Failed to get job status' });
-  }
-});
-
-// Video serving endpoint
-app.get('/api/videos/:id', (req, res) => {
-  const { id } = req.params;
-  const videoPath = path.join(processedDir, `${id}.mp4`);
-
-  if (!fs.existsSync(videoPath)) {
-    return res.status(404).json({
-      error: 'Video not found',
-    });
-  }
-
-  const stat = fs.statSync(videoPath);
-  const fileSize = stat.size;
-  const range = req.headers.range;
-
-  res.setHeader('Content-Type', 'video/mp4');
-  res.setHeader('Accept-Ranges', 'bytes');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-
-  if (range) {
-    const parts = range.replace(/bytes=/, '').split('-');
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-
-    if (start >= fileSize || end >= fileSize) {
-      return res.status(416).json({ error: 'Range not satisfiable' });
-    }
-
-    const chunksize = end - start + 1;
-    const file = fs.createReadStream(videoPath, { start, end });
-
-    res.writeHead(206, {
-      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-      'Content-Length': chunksize,
-    });
-
-    file.pipe(res);
-  } else {
-    res.writeHead(200, {
-      'Content-Length': fileSize,
-    });
-
-    fs.createReadStream(videoPath).pipe(res);
-  }
-});
-
-// Sample video endpoint
-app.get('/api/videos/sample', (req, res) => {
-  const samplePath = path.join(processedDir, 'sample.mp4');
-
-  if (fs.existsSync(samplePath)) {
-    const stat = fs.statSync(samplePath);
-    res.writeHead(200, {
-      'Content-Length': stat.size,
-      'Content-Type': 'video/mp4',
-    });
-    fs.createReadStream(samplePath).pipe(res);
-  } else {
-    res.status(404).json({ error: 'Sample video not available' });
-  }
-});
-
-// Homepage
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'Server is running properly',
-    timestamp: new Date().toISOString(),
-    port: port,
-    environment: process.env.NODE_ENV || 'development',
-  });
-});
-
-<<<<<<< HEAD
-// Attach all v1 API routes for world-class versioning
-const videoRoutes = require('./routes/video-routes');
-const feedbackRoutes = require('./routes/feedback-routes');
-const analyticsRoutes = require('./routes/analytics-routes');
-const i18nRoutes = require('./routes/i18n-routes');
-
-app.use('/api/v1/videos', videoRoutes);
-app.use('/api/v1/feedback', feedbackRoutes);
-app.use('/api/v1/analytics', analyticsRoutes);
-app.use('/api/v1/i18n', i18nRoutes);
-
-// --- Professional improvements start ---
-
-// 1. Define video duration limits (customize as needed)
-const MAX_DURATION_SEC = 1800; // 30 minutes
-const MIN_DURATION_SEC = 10; // 10 seconds
-
-// 2. Import videoQueue if not already
-let videoQueue;
-let redisConnectionHealthy = false;
-try {
-  const IORedis = require('ioredis');
-  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-  const redis = new IORedis(redisUrl);
-  await redis.ping();
-  redis.disconnect();
-  videoQueue = require('./queue/videoQueue');
-  redisConnectionHealthy = true;
-  logWithLevel('info', '✅ Redis connection established.');
-} catch (err) {
-  logWithLevel('error', '❌ Failed to connect to Redis:', err.message);
-  if (process.env.NODE_ENV === 'production') {
-    logWithLevel('error', 'Redis is required in production. Exiting.');
-    process.exit(1);
-  } else {
-    logWithLevel('warn', 'Redis unavailable. Queue features will be disabled.');
-    videoQueue = null;
-  }
-}
-
-// 3. Enforce required environment variables at startup
-const requiredEnvVars = [
-  // Add your required env vars here, e.g. 'REDIS_URL', 'AWS_S3_BUCKET'
-];
-const missingVars = requiredEnvVars.filter((k) => !process.env[k]);
-if (missingVars.length) {
-  logWithLevel('error', `Missing required environment variables: ${missingVars.join(', ')}`);
-  process.exit(1);
-}
-
-// 4. Restrict CORS in production
-const allowedOrigins =
-  process.env.NODE_ENV === 'production'
-    ? process.env.CORS_ORIGINS
-      ? process.env.CORS_ORIGINS.split(',')
-      : ['https://yourdomain.com']
-    : [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'http://localhost:5000',
-        'http://127.0.0.1:5000',
-        'http://localhost',
-        'http://127.0.0.1',
-        'https://yourdomain.com',
-      ];
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        logWithLevel('warn', `Blocked CORS origin: ${origin}`);
-        return callback(new Error('Not allowed by CORS'), false);
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  }),
-);
-
-// 5. Use winston logger everywhere (replace all console.log/warn/error)
-function log(level, ...args) {
-  logWithLevel(level, ...args);
-}
-
-// 6. Restrict static file serving to a public directory
-app.use(express.static(path.join(__dirname, 'public')));
-
-// 7. Fix error handler signature
-app.use((err, req, res, next) => {
-  logWithLevel('error', 'Server error:', err);
-  res.status(500).json({ error: 'Internal server error' });
-});
-
-// 8. Add Joi validation to all input endpoints (example for feedback)
-router.post('/api/feedback', (req, res) => {
-  const schema = Joi.object({
-    feedback: Joi.string().min(5).max(1000).required(),
-    email: Joi.string().email().optional(),
-  });
-  const { error, value } = schema.validate(req.body);
-  if (error) {
-    logWithLevel('warn', 'Invalid feedback input');
-    return res.status(400).json({ success: false, error: 'Invalid feedback input.' });
-  }
-  // TODO: Save feedback securely (do not log content)
-  res.json({ success: true, message: 'Feedback received (stub).' });
-});
-
-// 9. Fix health check async logic
-async function checkDependenciesAsync() {
-  const checks = {};
-  // Redis
-  try {
-    if (redisConnectionHealthy) {
-      checks.redis = 'ok';
-    } else {
-      checks.redis = 'error';
-    }
-  } catch (e) {
-    checks.redis = 'error';
-  }
-  // S3
-  try {
-    checks.s3 = process.env.AWS_S3_BUCKET ? 'configured' : 'missing';
-  } catch (e) {
-    checks.s3 = 'error';
-  }
-  // FFmpeg
-  try {
-    await new Promise((resolve, reject) => {
-      ffmpeg.getAvailableFormats((err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-    checks.ffmpeg = 'ok';
-  } catch (e) {
-    checks.ffmpeg = 'error';
-  }
-  return checks;
-}
-app.get('/health/dependencies', async (req, res) => {
-  res.json(await checkDependenciesAsync());
-});
-
-// 10. Add SIGINT and uncaught exception handlers
-process.on('SIGINT', () => {
-  logWithLevel('info', '🛑 SIGINT received, shutting down gracefully');
-  cleanupOldFiles();
-  process.exit(0);
-});
-process.on('uncaughtException', (err) => {
-  logWithLevel('error', 'Uncaught Exception:', err);
-  process.exit(1);
-});
-process.on('unhandledRejection', (reason) => {
-  logWithLevel('error', 'Unhandled Rejection:', reason);
-  process.exit(1);
-});
-
-// Centralized error handler
-app.use((err, req, res, next) => {
-  logWithLevel('error', 'Server error:', err);
-  res.status(500).json({ error: 'Internal server error' });
-=======
-// --- Professional API stubs for new features ---
-// User authentication (stub)
-app.post('/api/auth/login', (req, res) => {
-  logger.info('Login endpoint hit');
-  // TODO: Implement real authentication
-  res.json({ success: false, message: 'Login not implemented.' });
-});
-app.post('/api/auth/signup', (req, res) => {
-  logger.info('Signup endpoint hit');
-  // TODO: Implement real signup
-  res.json({ success: false, message: 'Signup not implemented.' });
-});
-// Analytics dashboard (stub)
-app.get('/api/analytics', (req, res) => {
-  logger.info('Analytics endpoint hit');
-  // TODO: Return real analytics
-  res.json({ success: true, data: { totalClips: 0, users: 0, downloads: 0 } });
-});
-// Feedback (stub)
-app.post('/api/feedback', (req, res) => {
-  logger.info('Feedback endpoint hit');
-  // TODO: Save feedback
-  res.json({ success: true, message: 'Feedback received (stub).' });
-});
-// Language/i18n (stub)
-app.get('/api/languages', (req, res) => {
-  logger.info('Languages endpoint hit');
-  res.json({ success: true, languages: ['en', 'es', 'fr', 'de', 'zh'] });
-});
-
-// Centralized error handler (must have 4 args for Express)
-app.use((err, req, res, next) => {
-  logger.error("Server error:", err);
-  res.status(500).json({ error: "Internal server error" });
->>>>>>> 70be700 (Refactor: clean API stubs, remove duplicate router, improve error handling, clarify structure, and enhance logging)
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  logWithLevel('info', '🛑 SIGTERM received, shutting down gracefully');
-  cleanupOldFiles();
-  process.exit(0);
-});
-
-// Socket.io WebSocket server for real-time job progress updates
+// --- API and Route Attachments ---
+// Use modular routes and controllers for all business logic.
+app.use('/api/v1/user', userRoutes);
+// ...add more modular routes as needed...
+// --- Socket.io WebSocket server for real-time job progress updates ---
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST'],
-  },
+  cors: { origin: '*', methods: ['GET', 'POST'] },
 });
-
-// BullMQ job events
 const videoQueueEvents = new QueueEvents('video-processing', {
   connection: new IORedis(process.env.REDIS_URL || 'redis://localhost:6379'),
 });
-
-videoQueueEvents.on('progress', ({ jobId, data }) => {
-  io.emit(`job-progress-${jobId}`, data);
-});
-videoQueueEvents.on('completed', ({ jobId, returnvalue }) => {
-  io.emit(`job-completed-${jobId}`, returnvalue);
-});
-videoQueueEvents.on('failed', ({ jobId, failedReason }) => {
-  io.emit(`job-failed-${jobId}`, failedReason);
-});
-
-// Advanced rate limiting and abuse detection
+videoQueueEvents.on('progress', ({ jobId, data }) => { io.emit(`job-progress-${jobId}`, data); });
+videoQueueEvents.on('completed', ({ jobId, returnvalue }) => { io.emit(`job-completed-${jobId}`, returnvalue); });
+videoQueueEvents.on('failed', ({ jobId, failedReason }) => { io.emit(`job-failed-${jobId}`, failedReason); });
 const advancedLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: (req, res) => {
-    // Stricter for unauthenticated, more for logged-in users
-    if (req.user) return 100;
-    return 30;
-  },
-  message: {
-    error: 'Too many requests. Please slow down.',
-  },
-  keyGenerator: (req) => {
-    // Per-user if logged in, else per-IP
-    if (req.user && req.user.id) return `user:${req.user.id}`;
-    return `ip:${req.ip}`;
-  },
+  windowMs: 10 * 60 * 1000,
+  max: (req, res) => (req.user ? 100 : 30),
+  message: { error: 'Too many requests. Please slow down.' },
+  keyGenerator: (req) => (req.user && req.user.id ? `user:${req.user.id}` : `ip:${req.ip}`),
   skip: (req) => req.path === '/health' || req.method === 'OPTIONS',
   handler: (req, res) => {
     logWithLevel('warn', 'Rate limit exceeded:', req.ip, req.originalUrl, req.user ? `user:${req.user.id}` : 'guest');
@@ -945,8 +295,6 @@ const advancedLimiter = rateLimit({
   },
 });
 app.use(['/api/v1/videos/process', '/api/v1/feedback', '/api/v1/analytics', '/api/v1/user/login', '/api/v1/user/signup'], advancedLimiter);
-
-// --- Audit Logging Middleware ---
 function auditLog(action) {
   return (req, res, next) => {
     const user = req.user ? req.user.email : 'guest';
@@ -954,23 +302,15 @@ function auditLog(action) {
     next();
   };
 }
-// Attach audit logging to sensitive endpoints
 app.use('/api/v1/user/login', auditLog('login'));
 app.use('/api/v1/user/signup', auditLog('signup'));
 app.use('/api/v1/feedback', auditLog('feedback'));
 app.use('/api/v1/analytics', auditLog('analytics'));
 app.use('/api/v1/videos/process', auditLog('video_process'));
-
-// --- Professional improvements end ---
-
-// Utility to format logger arguments (avoiding sensitive data)
 function logWithLevel(level, ...args) {
-  // Never log sensitive user input
   const safeArgs = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : a));
   logger[level](safeArgs.join(' '));
 }
-
-// --- MongoDB connection ---
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/nr1main';
 mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => logWithLevel('info', '✅ MongoDB connected'))
@@ -978,25 +318,13 @@ mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
     logWithLevel('error', '❌ MongoDB connection error:', err.message);
     process.exit(1);
   });
-
 if (!process.env.JWT_SECRET) {
   logWithLevel('error', 'JWT_SECRET is required in environment');
   process.exit(1);
 }
-
-// Use user routes
-app.use('/api/v1/user', userRoutes);
-
-// Start server
 server.listen(port, () => {
   logWithLevel('info', `🚀 Server running on http://localhost:${port}`);
   cleanupOldFiles();
 });
-
-// Instruct users to use app.js as the new entry point
-// console.warn('server.js is deprecated. Please use app.js as the main entry point for the new professional backend.');
-logWithLevel(
-  'warn',
-  'server.js is deprecated. Please use app.js as the main entry point for the new professional backend.',
-);
+logWithLevel('warn', 'server.js is deprecated. Please use app.js as the main entry point for the new professional backend.');
 require('./app');
