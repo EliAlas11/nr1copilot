@@ -79,6 +79,27 @@ app.get('/health/dependencies', async (req, res) => {
   }
 });
 
+// --- Root Health Endpoint ---
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    environment: process.env.NODE_ENV || 'development',
+    version: require('../package.json').version,
+    requestId: req.id,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// --- Security Headers for Static Files ---
+app.use((req, res, next) => {
+  if (req.url.startsWith('/public/')) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  }
+  next();
+});
+
 // --- Attach modular routes ---
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/videos', videoRoutes);
@@ -121,16 +142,22 @@ function setupGracefulShutdown(server) {
 }
 setupGracefulShutdown(server);
 
-// --- Pure Orchestrator Startup ---
+// --- Advanced Startup Diagnostics ---
 (async () => {
-  await bootstrapServer({
-    app,
-    server,
-    port,
-    mongoUri: process.env.MONGO_URI,
-    logWithLevel,
-    checkDependencies,
-    runtimeBanner: require('./utils/runtime').runtimeBanner,
-    printDeprecationWarning: require('./utils/runtime').printDeprecationWarning,
-  });
+  try {
+    await bootstrapServer({
+      app,
+      server,
+      port,
+      mongoUri: process.env.MONGO_URI,
+      logWithLevel,
+      checkDependencies,
+      runtimeBanner: require('./utils/runtime').runtimeBanner,
+      printDeprecationWarning: require('./utils/runtime').printDeprecationWarning,
+    });
+    logWithLevel('info', `🚀 Server bootstrap complete. Listening on port ${port}`);
+  } catch (err) {
+    logWithLevel('error', '❌ Fatal error during server bootstrap:', err);
+    process.exit(1);
+  }
 })();
