@@ -1,6 +1,6 @@
 import os
 from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -45,6 +45,12 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"success": False, "error": str(exc), "path": str(request.url)},
     )
+
+# Root route
+@app.get("/", include_in_schema=False)
+def root():
+    index_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "public", "index.html")
+    return FileResponse(index_path)
 
 from .routes import video, analytics, feedback, i18n, auth, user
 
