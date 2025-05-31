@@ -15,7 +15,7 @@ This guide explains how to deploy the Viral Clip Generator website on Render.com
 
 1. Create a new repository on GitHub
 2. Upload all project files to the repository
-3. Make sure to include `package.json`, `render.yaml`, and `server.js`
+3. Make sure to include `package.json`, `render.yaml`, and `nr1-main/server.js` (note: your main server file is in the `nr1-main` subfolder)
 
 ### 2. Create a New Service on Render.com
 
@@ -34,8 +34,8 @@ If uploading files directly:
 1. Set the following options:
    - **Name**: viral-clip-generator
    - **Environment**: Node
-   - **Build Command**: npm install
-   - **Start Command**: node server.js
+   - **Build Command**: cd nr1-main && npm install
+   - **Start Command**: cd nr1-main && node server.js
    - **Health Check Path**: /health
 
 ### 4. Set Environment Variables
@@ -48,7 +48,7 @@ Add the following environment variables:
 1. Go to the "Disks" section in your service settings
 2. Add a new disk:
    - **Name**: viral-clips-data
-   - **Mount Path**: /opt/render/project/src/videos
+   - **Mount Path**: /opt/render/project/src/nr1-main/videos
    - **Size**: 1 GB (increase as needed)
 
 ### 6. Start Deployment
@@ -131,7 +131,23 @@ If deploying publicly, use a reverse proxy (like Nginx) to enable HTTPS.
 - Old files are cleaned up automatically every 30 minutes.
 
 ## 6. Logging
-- Errors are logged to the console. For production, consider using a logging service or redirecting output to a file.
+
+- By default, errors and logs are output to the console.
+- **Production best practice:**
+  - Use a logging service (e.g., Loggly, Papertrail, Datadog) or redirect logs to a file for easier monitoring and debugging.
+  - To log to a file, you can use the `morgan` middleware in your `server.js`:
+    ```js
+    const morgan = require('morgan');
+    const fs = require('fs');
+    const path = require('path');
+    if (process.env.NODE_ENV === 'production') {
+      const logStream = fs.createWriteStream(path.join(__dirname, 'server.log'), { flags: 'a' });
+      app.use(morgan('combined', { stream: logStream }));
+    }
+    ```
+  - On Render.com, you can also view logs in the Render dashboard under the "Logs" tab for your service.
+- **Tip:** Regularly review your logs for errors, warnings, and performance issues.
+- **Security:** Never log sensitive user data (like passwords or payment info).
 
 ## 7. Testing
 - Test with various YouTube URLs (public, private, age-restricted, long, short, etc.).
