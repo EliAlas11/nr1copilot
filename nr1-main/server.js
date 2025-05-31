@@ -148,7 +148,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- Graceful Shutdown with Metrics and Banner ---
+// --- Utility: Timestamped Logging Wrapper ---
+function logWithTimestamp(level, ...args) {
+  const now = new Date().toISOString();
+  logWithLevel(level, `[${now}]`, ...args);
+}
+
+// --- Graceful Shutdown with Metrics, Banner, and Timestamped Logs ---
 function setupGracefulShutdown(server) {
   let connections = new Set();
   let shuttingDown = false;
@@ -160,23 +166,30 @@ function setupGracefulShutdown(server) {
     if (shuttingDown) return;
     shuttingDown = true;
     const uptime = ((Date.now() - serverStartTime) / 1000).toFixed(1);
-    logWithLevel('info', '==============================');
-    logWithLevel('info', `   ⏻ Shutdown (${signal}) requested   `);
-    logWithLevel('info', '==============================');
-    logWithLevel('info', `Uptime: ${uptime}s | Total Requests: ${totalRequests}`);
-    logWithLevel('info', `Active Connections: ${connections.size}`);
+    const shutdownStart = Date.now();
+    logWithTimestamp('info', '==============================');
+    logWithTimestamp('info', `   ⏻ Shutdown (${signal}) requested   `);
+    logWithTimestamp('info', '==============================');
+    logWithTimestamp('info', `Uptime: ${uptime}s | Total Requests: ${totalRequests}`);
+    logWithTimestamp('info', `Active Connections: ${connections.size}`);
     server.close((err) => {
       if (err) {
-        logWithLevel('error', 'Error closing HTTP server during shutdown:', err);
+        logWithTimestamp('error', 'Error closing HTTP server during shutdown:', err);
       } else {
-        logWithLevel('info', 'HTTP server closed');
+        logWithTimestamp('info', 'HTTP server closed');
       }
       setTimeout(() => {
-        logWithLevel('info', `Force closing ${connections.size} open connections`);
+        logWithTimestamp('info', `Force closing ${connections.size} open connections`);
         for (const conn of connections) conn.destroy();
-        logWithLevel('info', '==============================');
-        logWithLevel('info', '   💡 NR1 Copilot stopped.         ');
-        logWithLevel('info', '==============================');
+        const shutdownTime = ((Date.now() - shutdownStart) / 1000).toFixed(2);
+        logWithTimestamp('info', `Shutdown completed in ${shutdownTime}s`);
+        logWithTimestamp('info', '==============================');
+        logWithTimestamp('info', '   💡 NR1 Copilot stopped.         ');
+        logWithTimestamp('info', '==============================');
+        // Post-shutdown hook (for future: flush logs, notify, etc.)
+        if (typeof global.onServerShutdown === 'function') {
+          global.onServerShutdown();
+        }
         process.exit(0);
       }, 5000);
     });
@@ -185,11 +198,11 @@ function setupGracefulShutdown(server) {
     process.once(signal, () => shutdown(signal));
   });
   process.once('uncaughtException', (err) => {
-    logWithLevel('error', 'Uncaught Exception:', err);
+    logWithTimestamp('error', 'Uncaught Exception:', err);
     shutdown('uncaughtException');
   });
   process.once('unhandledRejection', (reason) => {
-    logWithLevel('error', 'Unhandled Rejection:', reason);
+    logWithTimestamp('error', 'Unhandled Rejection:', reason);
     shutdown('unhandledRejection');
   });
 }
