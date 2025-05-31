@@ -1,0 +1,31 @@
+// config/config.js
+// Centralized configuration for environment, security, and app settings
+require('dotenv').config();
+
+const ENV = process.env.NODE_ENV || 'development';
+
+module.exports = {
+  env: ENV,
+  port: process.env.PORT || 5000,
+  redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
+  s3Bucket: process.env.AWS_S3_BUCKET,
+  corsOrigins: ENV === 'production'
+    ? [process.env.CORS_ORIGIN || 'https://yourdomain.com']
+    : '*',
+  rateLimit: {
+    windowMs: 15 * 60 * 1000,
+    max: ENV === 'production' ? 100 : 1000,
+  },
+  advancedRateLimit: {
+    windowMs: 10 * 60 * 1000,
+    max: ENV === 'production' ? 30 : 300,
+  },
+  staticDir: 'public',
+  logFile: 'server.log',
+  maxVideoDuration: 1800, // 30 min
+  minVideoDuration: 10,   // 10 sec
+  requiredEnv: [
+    // Add required env vars for production
+    // 'REDIS_URL', 'AWS_S3_BUCKET', ...
+  ],
+};

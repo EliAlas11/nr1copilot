@@ -22,9 +22,11 @@ const swaggerDocument = YAML.load(path.join(__dirname, 'swagger.yaml'));
 try {
   const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
   ffmpeg.setFfmpegPath(ffmpegPath);
-  console.log("✅ FFmpeg configured successfully");
+  // console.log("✅ FFmpeg configured successfully");
+  logWithLevel('info', '✅ FFmpeg configured successfully');
 } catch {
-  console.warn("⚠️ FFmpeg installer not found, using system FFmpeg");
+  // console.warn("⚠️ FFmpeg installer not found, using system FFmpeg");
+  logWithLevel('warn', '⚠️ FFmpeg installer not found, using system FFmpeg');
   // Will use system FFmpeg if available
 }
 
@@ -157,7 +159,8 @@ const requiredEnv = [
 ];
 const missingEnv = requiredEnv.filter((k) => !process.env[k]);
 if (missingEnv.length) {
-  console.warn('⚠️ Missing required environment variables:', missingEnv.join(', '));
+  // console.warn('⚠️ Missing required environment variables:', missingEnv.join(', '));
+  logWithLevel('warn', '⚠️ Missing required environment variables:', missingEnv.join(', '));
 }
 
 // REDIS/S3/FFMPEG HEALTH CHECKS
@@ -238,13 +241,15 @@ function extractVideoId(url) {
 async function getVideoInfo(videoId) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
-      console.log("⏰ Video info timeout for:", videoId);
+      // console.log("⏰ Video info timeout for:", videoId);
+      logWithLevel('info', '⏰ Video info timeout for:', videoId);
       reject(new Error("Request timeout - video may be unavailable"));
     }, 30000);
 
     try {
       const url = `https://www.youtube.com/watch?v=${videoId}`;
-      console.log("🔍 Getting video info for:", videoId, "URL:", url);
+      // console.log("🔍 Getting video info for:", videoId, "URL:", url);
+      logWithLevel('info', "🔍 Getting video info for:", videoId, "URL:", url);
 
       if (
         !videoId ||
@@ -252,7 +257,8 @@ async function getVideoInfo(videoId) {
         !/^[a-zA-Z0-9_-]+$/.test(videoId)
       ) {
         clearTimeout(timeout);
-        console.error("❌ Invalid video ID format:", videoId);
+        // console.error("❌ Invalid video ID format:", videoId);
+        logWithLevel('error', "❌ Invalid video ID format:", videoId);
         reject(new Error("Invalid video ID format"));
         return;
       }
@@ -261,20 +267,23 @@ async function getVideoInfo(videoId) {
       try {
         if (!ytdl.validateURL(url)) {
           clearTimeout(timeout);
-          console.error("❌ Invalid YouTube URL:", url);
+          // console.error("❌ Invalid YouTube URL:", url);
+          logWithLevel('error', "❌ Invalid YouTube URL:", url);
           reject(new Error("Invalid YouTube URL"));
           return;
         }
       } catch (validateError) {
         clearTimeout(timeout);
-        console.error("❌ URL validation error:", validateError);
+        // console.error("❌ URL validation error:", validateError);
+        logWithLevel('error', "❌ URL validation error:", validateError);
         reject(
           new Error("Failed to validate YouTube URL: " + validateError.message),
         );
         return;
       }
 
-      console.log("✅ URL validation passed, getting info...");
+      // console.log("✅ URL validation passed, getting info...");
+      logWithLevel('info', "✅ URL validation passed, getting info...");
 
       ytdl
         .getInfo(url, {
@@ -288,16 +297,19 @@ async function getVideoInfo(videoId) {
         })
         .then((info) => {
           clearTimeout(timeout);
-          console.log("📄 Raw video info received");
+          // console.log("📄 Raw video info received");
+          logWithLevel('info', "📄 Raw video info received");
 
           if (!info || !info.videoDetails) {
-            console.error("❌ No video details in response");
+            // console.error("❌ No video details in response");
+            logWithLevel('error', "❌ No video details in response");
             reject(new Error("Invalid video information received"));
             return;
           }
 
           const duration = parseInt(info.videoDetails.lengthSeconds) || 0;
-          console.log("⏱️ Video duration:", duration, "seconds");
+          // console.log("⏱️ Video duration:", duration, "seconds");
+          logWithLevel('info', "⏱️ Video duration:", duration, "seconds");
 
           if (duration > MAX_DURATION_SEC) {
             reject(
@@ -326,12 +338,13 @@ async function getVideoInfo(videoId) {
             author: info.videoDetails.author?.name || "Unknown Author",
           };
 
-          console.log("✅ Video info retrieved successfully:", result.title);
+          // console.log("✅ Video info retrieved successfully:", result.title);
+          logWithLevel('info', "✅ Video info retrieved successfully:", result.title);
           resolve(result);
         })
         .catch((error) => {
           clearTimeout(timeout);
-          console.error("❌ ytdl.getInfo error:", error);
+          // console.error("❌ ytdl.getInfo error:", error);
 
           let errorMessage = "Failed to get video information";
 
@@ -339,7 +352,8 @@ async function getVideoInfo(videoId) {
           const errorString = error
             ? error.message || error.toString() || JSON.stringify(error)
             : "Unknown error";
-          console.error("❌ Error details:", errorString);
+          // console.error("❌ Error details:", errorString);
+          logWithLevel('error', "❌ Error details:", errorString);
 
           if (errorString) {
             if (
@@ -394,7 +408,8 @@ async function getVideoInfo(videoId) {
         });
     } catch (error) {
       clearTimeout(timeout);
-      console.error("❌ Video info setup error:", error);
+      // console.error("❌ Video info setup error:", error);
+      logWithLevel('error', "❌ Video info setup error:", error);
       reject(
         new Error(
           "Failed to initialize video info request: " +
@@ -419,7 +434,8 @@ app.post("/api/validate", async (req, res) => {
       });
     }
 
-    console.log("🔍 Validating URL:", url);
+    // console.log("🔍 Validating URL:", url);
+    logWithLevel('info', "🔍 Validating URL:", url);
 
     const videoId = extractVideoId(url);
 
@@ -444,7 +460,8 @@ app.post("/api/validate", async (req, res) => {
       try {
         isValid = ytdl.validateURL(testUrl);
       } catch (validateError) {
-        console.warn("⚠️ URL validation failed:", validateError);
+        // console.warn("⚠️ URL validation failed:", validateError);
+        logWithLevel('warn', "⚠️ URL validation failed:", validateError);
         accessError = "Invalid YouTube URL format";
       }
 
@@ -460,7 +477,8 @@ app.post("/api/validate", async (req, res) => {
           });
           canAccess = true;
         } catch (basicInfoError) {
-          console.warn("⚠️ Basic info fetch failed:", basicInfoError);
+          // console.warn("⚠️ Basic info fetch failed:", basicInfoError);
+          logWithLevel('warn', "⚠️ Basic info fetch failed:", basicInfoError);
           if (basicInfoError && basicInfoError.message) {
             if (basicInfoError.message.includes("Video unavailable")) {
               accessError = "Video is unavailable, private, or deleted";
@@ -476,7 +494,8 @@ app.post("/api/validate", async (req, res) => {
         }
       }
     } catch (testError) {
-      console.warn("⚠️ Video access test failed:", testError);
+      // console.warn("⚠️ Video access test failed:", testError);
+      logWithLevel('warn', "⚠️ Video access test failed:", testError);
       accessError =
         "Failed to test video accessibility: " +
         (testError.message || "Unknown error");
@@ -490,7 +509,8 @@ app.post("/api/validate", async (req, res) => {
       warning: accessError,
     });
   } catch (error) {
-    console.error("❌ Validation error:", error);
+    // console.error("❌ Validation error:", error);
+    logWithLevel('error', "❌ Validation error:", error);
     res.status(500).json({
       success: false,
       error: "Validation failed: " + (error.message || "Unknown error"),
@@ -510,7 +530,8 @@ app.get("/api/info/:videoId", async (req, res) => {
       });
     }
 
-    console.log("📄 Getting info for video ID:", videoId);
+    // console.log("📄 Getting info for video ID:", videoId);
+    logWithLevel('info', "📄 Getting info for video ID:", videoId);
     const info = await getVideoInfo(videoId);
 
     res.json({
@@ -518,12 +539,12 @@ app.get("/api/info/:videoId", async (req, res) => {
       ...info,
     });
   } catch (error) {
-    console.error(
-      "❌ Video info error for ID:",
-      req.params.videoId,
-      "Error:",
-      error,
-    );
+    // console.error(
+    //   "❌ Video info error for ID:",
+    //   req.params.videoId,
+    //   "Error:",
+    //   error,
+    // );
 
     let statusCode = 500;
     let errorMessage = "Failed to get video information";
@@ -544,7 +565,8 @@ app.get("/api/info/:videoId", async (req, res) => {
         statusCode = 408;
       }
     } else {
-      console.error("❌ Empty error object received");
+      // console.error("❌ Empty error object received");
+      logWithLevel('error', "❌ Empty error object received");
       errorMessage = "Unknown error occurred while getting video information";
     }
 
@@ -744,14 +766,14 @@ try {
   redis.disconnect();
   videoQueue = require('./queue/videoQueue');
   redisConnectionHealthy = true;
-  logger.info('✅ Redis connection established.');
+  logWithLevel('info', '✅ Redis connection established.');
 } catch (err) {
-  logger.error('❌ Failed to connect to Redis:', err.message);
+  logWithLevel('error', '❌ Failed to connect to Redis:', err.message);
   if (process.env.NODE_ENV === 'production') {
-    logger.error('Redis is required in production. Exiting.');
+    logWithLevel('error', 'Redis is required in production. Exiting.');
     process.exit(1);
   } else {
-    logger.warn('Redis unavailable. Queue features will be disabled.');
+    logWithLevel('warn', 'Redis unavailable. Queue features will be disabled.');
     videoQueue = null;
   }
 }
@@ -762,16 +784,33 @@ const requiredEnvVars = [
 ];
 const missingVars = requiredEnvVars.filter((k) => !process.env[k]);
 if (missingVars.length) {
-  logger.error(`Missing required environment variables: ${missingVars.join(', ')}`);
+  logWithLevel('error', `Missing required environment variables: ${missingVars.join(', ')}`);
   process.exit(1);
 }
 
 // 4. Restrict CORS in production
 const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.CORS_ORIGIN || 'https://yourdomain.com']
-  : '*';
+  ? (process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : ['https://yourdomain.com'])
+  : [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:5000',
+      'http://127.0.0.1:5000',
+      'http://localhost',
+      'http://127.0.0.1',
+      'https://yourdomain.com',
+    ];
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      logWithLevel('warn', `Blocked CORS origin: ${origin}`);
+      return callback(new Error('Not allowed by CORS'), false);
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
@@ -779,7 +818,7 @@ app.use(cors({
 
 // 5. Use winston logger everywhere (replace all console.log/warn/error)
 function log(level, ...args) {
-  logger.log(level, args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '));
+  logWithLevel(level, ...args);
 }
 
 // 6. Restrict static file serving to a public directory
@@ -787,7 +826,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // 7. Fix error handler signature
 app.use((err, req, res, next) => {
-  logger.error('Server error:', err);
+  logWithLevel('error', 'Server error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
@@ -799,7 +838,7 @@ router.post('/api/feedback', (req, res) => {
   });
   const { error, value } = schema.validate(req.body);
   if (error) {
-    logger.warn('Invalid feedback input');
+    logWithLevel('warn', 'Invalid feedback input');
     return res.status(400).json({ success: false, error: 'Invalid feedback input.' });
   }
   // TODO: Save feedback securely (do not log content)
@@ -838,29 +877,29 @@ app.get('/health/dependencies', async (req, res) => {
 
 // 10. Add SIGINT and uncaught exception handlers
 process.on('SIGINT', () => {
-  logger.info('🛑 SIGINT received, shutting down gracefully');
+  logWithLevel('info', '🛑 SIGINT received, shutting down gracefully');
   cleanupOldFiles();
   process.exit(0);
 });
 process.on('uncaughtException', (err) => {
-  logger.error('Uncaught Exception:', err);
+  logWithLevel('error', 'Uncaught Exception:', err);
   process.exit(1);
 });
 process.on('unhandledRejection', (reason) => {
-  logger.error('Unhandled Rejection:', reason);
+  logWithLevel('error', 'Unhandled Rejection:', reason);
   process.exit(1);
 });
-// --- Professional improvements end ---
+// ...existing code...
 
 // Centralized error handler
 app.use((err, req, res, next) => {
-  logger.error('Server error:', err);
+  logWithLevel('error', 'Server error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
-  logger.info("🛑 SIGTERM received, shutting down gracefully");
+  logWithLevel('info', "🛑 SIGTERM received, shutting down gracefully");
   cleanupOldFiles();
   process.exit(0);
 });
@@ -899,8 +938,7 @@ const advancedLimiter = rateLimit({
   keyGenerator: (req) => req.ip,
   skip: (req) => req.path === "/health" || req.method === "OPTIONS",
   handler: (req, res) => {
-    // Log abuse attempts
-    console.warn("Rate limit exceeded:", req.ip, req.originalUrl);
+    logWithLevel('warn', "Rate limit exceeded:", req.ip, req.originalUrl);
     res.status(429).json({ error: "Too many requests. Please slow down." });
   },
 });
@@ -942,6 +980,18 @@ app.get('/health/extended', asyncHandler(async (req, res) => {
 
 // Start server
 server.listen(port, () => {
-  console.log(`🚀 Server running on http://localhost:${port}`);
+  logWithLevel('info', `🚀 Server running on http://localhost:${port}`);
   cleanupOldFiles();
 });
+
+// Instruct users to use app.js as the new entry point
+// console.warn('server.js is deprecated. Please use app.js as the main entry point for the new professional backend.');
+logWithLevel('warn', 'server.js is deprecated. Please use app.js as the main entry point for the new professional backend.');
+require('./app');
+
+// Utility to format logger arguments (avoiding sensitive data)
+function logWithLevel(level, ...args) {
+  // Never log sensitive user input
+  const safeArgs = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a));
+  logger[level](safeArgs.join(' '));
+}
