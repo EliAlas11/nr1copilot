@@ -1,39 +1,39 @@
-const User = require('../models/User');
-const jwt = require('jsonwebtoken');
+const asyncHandler = require('../utils/asyncHandler');
+const userService = require('../services/userService');
+const userValidator = require('../validators/userValidator');
+const logger = require('../config/logger');
+const { errorResponse } = require('../utils/errorResponse');
 
-function signToken(user) {
-  return jwt.sign({ id: user._id, email: user.email, roles: user.roles }, process.env.JWT_SECRET, { expiresIn: '7d' });
-}
-
-exports.signup = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(409).json({ error: 'Email already registered' });
-    const user = await User.create({ email, password });
-    const token = signToken(user);
-    res.status(201).json({ success: true, token });
-  } catch (err) {
-    res.status(500).json({ error: 'Signup failed' });
+exports.signup = asyncHandler(async (req, res) => {
+  const { error, value } = userValidator.signup.validate(req.body);
+  if (error) {
+    logger.warn('Invalid signup input');
+    return errorResponse(res, 400, error.message);
   }
-};
-
-exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-    const user = await User.findOne({ email });
-    if (!user || !(await user.comparePassword(password))) return res.status(401).json({ error: 'Invalid credentials' });
-    user.lastLogin = new Date();
-    await user.save();
-    const token = signToken(user);
-    res.json({ success: true, token });
+    const result = await userService.signup(value);
+    res.status(201).json({ success: true, ...result });
   } catch (err) {
-    res.status(500).json({ error: 'Login failed' });
+    logger.warn('Signup failed:', err.message);
+    return errorResponse(res, 400, err.message);
   }
-};
+});
 
-exports.me = async (req, res) => {
-  res.json({ success: true, user: req.user });
-};
+exports.login = asyncHandler(async (req, res) => {
+  const { error, value } = userValidator.login.validate(req.body);
+  if (error) {
+    logger.warn('Invalid login input');
+    return errorResponse(res, 400, error.message);
+  }
+  try {
+    const result = await userService.login(value);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    logger.warn('Login failed:', err.message);
+    return errorResponse(res, 401, err.message);
+  }
+});
+
+exports.me = asyncHandler(async (req, res) => {
+  res.json({ success: true, ...(await userService.getMe(req.user)) });
+});

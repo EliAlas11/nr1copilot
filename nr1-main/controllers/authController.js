@@ -2,13 +2,15 @@
 const Joi = require('joi');
 const logger = require('../config/logger');
 const { errorResponse } = require('../utils/errorResponse');
+const asyncHandler = require('../utils/asyncHandler');
+const authService = require('../services/authService');
 
-exports.login = (req, res) => {
-  // TODO: Implement real authentication logic
-  res.json({ success: false, message: 'Login not implemented.' });
-};
+exports.login = asyncHandler(async (req, res) => {
+  const result = await authService.login(req.body);
+  res.json({ success: false, ...result });
+});
 
-exports.signup = (req, res) => {
-  // TODO: Implement real signup logic
-  res.json({ success: false, message: 'Signup not implemented.' });
-};
+exports.signup = asyncHandler(async (req, res) => {
+  const result = await authService.signup(req.body);
+  res.json({ success: false, ...result });
+});

@@ -1,7 +1,9 @@
 // Analytics API controller
 const logger = require('../config/logger');
+const asyncHandler = require('../utils/asyncHandler');
+const analyticsService = require('../services/analyticsService');
 
-exports.dashboard = (req, res) => {
-  // TODO: Return real analytics data
-  res.json({ success: true, data: { totalClips: 0, users: 0, downloads: 0 } });
-};
+exports.dashboard = asyncHandler(async (req, res) => {
+  const data = await analyticsService.getDashboard();
+  res.json({ success: true, data });
+});
