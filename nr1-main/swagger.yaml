@@ -2,7 +2,12 @@ openapi: 3.0.0
 info:
   title: NR1 Main API
   version: 1.0.0
-  description: World-class video processing and user API
+  description: |
+    World-class video processing and user API
+    
+    **Security & Observability:**
+    - Per-user and per-IP rate limiting on all sensitive endpoints
+    - Audit logging for all sensitive actions (login, signup, feedback, analytics, video processing)
 servers:
   - url: /api/v1
 paths:

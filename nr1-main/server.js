@@ -888,57 +888,50 @@ videoQueueEvents.on('failed', ({ jobId, failedReason }) => {
 // Advanced rate limiting and abuse detection
 const advancedLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 30, // lower limit for sensitive endpoints
+  max: (req, res) => {
+    // Stricter for unauthenticated, more for logged-in users
+    if (req.user) return 100;
+    return 30;
+  },
   message: {
     error: 'Too many requests. Please slow down.',
   },
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => {
+    // Per-user if logged in, else per-IP
+    if (req.user && req.user.id) return `user:${req.user.id}`;
+    return `ip:${req.ip}`;
+  },
   skip: (req) => req.path === '/health' || req.method === 'OPTIONS',
   handler: (req, res) => {
-    logWithLevel('warn', 'Rate limit exceeded:', req.ip, req.originalUrl);
+    logWithLevel('warn', 'Rate limit exceeded:', req.ip, req.originalUrl, req.user ? `user:${req.user.id}` : 'guest');
     res.status(429).json({ error: 'Too many requests. Please slow down.' });
   },
 });
-app.use('/api/process', advancedLimiter);
+app.use(['/api/v1/videos/process', '/api/v1/feedback', '/api/v1/analytics', '/api/v1/user/login', '/api/v1/user/signup'], advancedLimiter);
 
-// Setup winston logger
-const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`),
-  ),
-  transports: [
-    new winston.transports.Console(),
-    ...(process.env.NODE_ENV === 'production'
-      ? [new winston.transports.File({ filename: 'server.log' })]
-      : []),
-  ],
-});
+// --- Audit Logging Middleware ---
+function auditLog(action) {
+  return (req, res, next) => {
+    const user = req.user ? req.user.email : 'guest';
+    logWithLevel('info', `[AUDIT]`, action, 'by', user, 'from', req.ip, 'at', new Date().toISOString());
+    next();
+  };
+}
+// Attach audit logging to sensitive endpoints
+app.use('/api/v1/user/login', auditLog('login'));
+app.use('/api/v1/user/signup', auditLog('signup'));
+app.use('/api/v1/feedback', auditLog('feedback'));
+app.use('/api/v1/analytics', auditLog('analytics'));
+app.use('/api/v1/videos/process', auditLog('video_process'));
 
-// --- Extended Health Endpoint ---
-app.get(
-  '/health/extended',
-  asyncHandler(async (req, res) => {
-    const checks = await checkDependenciesAsync();
-    const uptime = process.uptime();
-    const memory = process.memoryUsage();
-    let queueLength = null;
-    if (videoQueue) {
-      try {
-        queueLength = await videoQueue.count();
-      } catch {}
-    }
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime,
-      memory,
-      queueLength,
-      dependencies: checks,
-    });
-  }),
-);
+// --- Professional improvements end ---
+
+// Utility to format logger arguments (avoiding sensitive data)
+function logWithLevel(level, ...args) {
+  // Never log sensitive user input
+  const safeArgs = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : a));
+  logger[level](safeArgs.join(' '));
+}
 
 // --- MongoDB connection ---
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/nr1main';
@@ -970,10 +963,3 @@ logWithLevel(
   'server.js is deprecated. Please use app.js as the main entry point for the new professional backend.',
 );
 require('./app');
-
-// Utility to format logger arguments (avoiding sensitive data)
-function logWithLevel(level, ...args) {
-  // Never log sensitive user input
-  const safeArgs = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : a));
-  logger[level](safeArgs.join(' '));
-}
