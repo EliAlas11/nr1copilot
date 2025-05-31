@@ -150,8 +150,9 @@ async function processVideoJob({ videoId, url, job }) {
     }
     return { status: 'done', output: outputPath, s3Url };
   } catch (err) {
+    logger.error(`Error processing video ${videoId}: ${err.message}`);
     if (outputPath && fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-    throw err;
+    throw new Error(`Failed to process video: ${err.message}`);
   }
 }
 

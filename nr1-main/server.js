@@ -88,11 +88,29 @@ app.use((req, res, next) => {
 
 // --- Health check endpoints ---
 app.get('/health/dependencies', async (req, res) => {
+  let responded = false;
+  const timeout = setTimeout(() => {
+    if (!responded) {
+      responded = true;
+      res.status(500).json({ status: 'error', error: 'Dependency check timeout', requestId: req.id });
+    }
+  }, 3000); // 3s timeout for Render.com health check
   try {
-    const health = await checkDependencies();
-    res.status(200).json({ status: 'ok', dependencies: health, requestId: req.id });
+    const health = await Promise.race([
+      checkDependencies(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Dependency check timeout')), 2500)),
+    ]);
+    if (!responded) {
+      clearTimeout(timeout);
+      res.status(200).json({ status: 'ok', dependencies: health, requestId: req.id });
+      responded = true;
+    }
   } catch (e) {
-    res.status(500).json({ status: 'error', error: e.message, requestId: req.id });
+    if (!responded) {
+      clearTimeout(timeout);
+      res.status(500).json({ status: 'error', error: e.message, requestId: req.id });
+      responded = true;
+    }
   }
 });
 
@@ -109,7 +127,7 @@ app.get('/health', (req, res) => {
 
 // --- Security Headers for Static Files ---
 app.use((req, res, next) => {
-  if (req.url.startsWith('/public/')) {
+  if (req.url.startsWith('/public/') || req.url.startsWith('/static/')) {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -234,7 +252,7 @@ try {
 
 // --- Config Validation and Startup Summary Table ---
 const requiredEnvVars = [
-  'MONGO_URI',
+  'MONGODB_URI',
   'JWT_SECRET',
   'REDIS_URL',
 ];
@@ -270,7 +288,7 @@ function printConfigSummary() {
     { Key: 'Platform', Value: process.platform },
     { Key: 'Environment', Value: process.env.NODE_ENV || 'development' },
     { Key: 'Port', Value: port },
-    { Key: 'Mongo URI', Value: process.env.MONGO_URI ? '[set]' : '[not set]' },
+    { Key: 'Mongo URI', Value: process.env.MONGODB_URI ? '[set]' : '[not set]' },
     { Key: 'Redis URL', Value: process.env.REDIS_URL ? '[set]' : '[not set]' },
     { Key: 'S3 Bucket', Value: process.env.AWS_S3_BUCKET ? '[set]' : '[not set]' },
     { Key: 'JWT Secret', Value: process.env.JWT_SECRET ? '[set]' : '[not set]' },
@@ -345,7 +363,7 @@ validateFFmpeg();
       app,
       server,
       port,
-      mongoUri: process.env.MONGO_URI,
+      mongoUri: process.env.MONGODB_URI,
       logWithLevel: logWithTimestamp,
       checkDependencies,
       runtimeBanner: require('./utils/runtime').runtimeBanner,

@@ -1,5 +1,5 @@
 // config/config.js
-// Centralized configuration for environment, security, and app settings
+// Required env vars: MONGODB_URI, REDIS_URL, JWT_SECRET, (production: AWS_S3_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, VIDEO_STORAGE_PATH, LOG_FILE_PATH)
 require('dotenv').config();
 
 const ENV = process.env.NODE_ENV || 'development';
@@ -19,7 +19,7 @@ module.exports = {
     max: ENV === 'production' ? 30 : 300,
   },
   staticDir: 'public',
-  logFilePath: process.env.LOG_FILE_PATH || 'server.log',
+  logFilePath: process.env.LOG_FILE_PATH,
   maxVideoDuration: 1800, // 30 min
   minVideoDuration: 10, // 10 sec
   videoStoragePath: process.env.VIDEO_STORAGE_PATH || '/opt/render/project/src/nr1-main/videos',
