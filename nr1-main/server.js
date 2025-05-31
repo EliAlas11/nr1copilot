@@ -229,18 +229,24 @@ if (missingVars.length) {
 
 function printConfigSummary() {
   const summary = [
-    ['Node.js', process.version],
-    ['Platform', process.platform],
-    ['Environment', process.env.NODE_ENV || 'development'],
-    ['Port', port],
-    ['Mongo URI', process.env.MONGO_URI ? '[set]' : '[not set]'],
-    ['Redis URL', process.env.REDIS_URL ? '[set]' : '[not set]'],
-    ['S3 Bucket', process.env.AWS_S3_BUCKET ? '[set]' : '[not set]'],
-    ['JWT Secret', process.env.JWT_SECRET ? '[set]' : '[not set]'],
+    { Key: 'Node.js', Value: process.version },
+    { Key: 'Platform', Value: process.platform },
+    { Key: 'Environment', Value: process.env.NODE_ENV || 'development' },
+    { Key: 'Port', Value: port },
+    { Key: 'Mongo URI', Value: process.env.MONGO_URI ? '[set]' : '[not set]' },
+    { Key: 'Redis URL', Value: process.env.REDIS_URL ? '[set]' : '[not set]' },
+    { Key: 'S3 Bucket', Value: process.env.AWS_S3_BUCKET ? '[set]' : '[not set]' },
+    { Key: 'JWT Secret', Value: process.env.JWT_SECRET ? '[set]' : '[not set]' },
   ];
   logWithTimestamp('info', color('--- Configuration Summary ---'));
-  for (const [k, v] of summary) {
-    logWithTimestamp('info', color(`${k.padEnd(14)}: ${v}`));
+  if (typeof console.table === 'function') {
+    // Print as a table for beautiful output
+    // eslint-disable-next-line no-console
+    console.table(summary);
+  } else {
+    for (const { Key, Value } of summary) {
+      logWithTimestamp('info', color(`${Key.padEnd(14)}: ${Value}`));
+    }
   }
   logWithTimestamp('info', color('-----------------------------'));
 }
