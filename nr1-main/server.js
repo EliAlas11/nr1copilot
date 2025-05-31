@@ -147,8 +147,12 @@ function setupGracefulShutdown(server) {
   });
   const shutdown = async () => {
     logWithLevel('info', 'Received shutdown signal, closing server...');
-    server.close(() => {
-      logWithLevel('info', 'HTTP server closed');
+    server.close((err) => {
+      if (err) {
+        logWithLevel('error', 'Error closing HTTP server during shutdown:', err);
+      } else {
+        logWithLevel('info', 'HTTP server closed');
+      }
       setTimeout(() => {
         logWithLevel('info', `Force closing ${connections.size} open connections`);
         for (const conn of connections) conn.destroy();
@@ -158,6 +162,14 @@ function setupGracefulShutdown(server) {
   };
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
+  process.on('uncaughtException', (err) => {
+    logWithLevel('error', 'Uncaught Exception:', err);
+    process.exit(1);
+  });
+  process.on('unhandledRejection', (reason) => {
+    logWithLevel('error', 'Unhandled Rejection:', reason);
+    process.exit(1);
+  });
 }
 setupGracefulShutdown(server);
 
