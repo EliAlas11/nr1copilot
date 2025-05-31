@@ -1,0 +1,83 @@
+openapi: 3.0.0
+info:
+  title: Viral Clip Generator API
+  version: 1.0.0
+  description: Professional API documentation for the Viral Clip Generator backend.
+servers:
+  - url: /api
+paths:
+  /validate:
+    post:
+      summary: Validate a YouTube URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  example: https://www.youtube.com/watch?v=abcdefghijk
+      responses:
+        '200':
+          description: Validation result
+  /info/{videoId}:
+    get:
+      summary: Get video info
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema:
+            type: string
+            example: abcdefghijk
+      responses:
+        '200':
+          description: Video info
+  /process:
+    post:
+      summary: Queue a video processing job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                videoId:
+                  type: string
+                url:
+                  type: string
+      responses:
+        '200':
+          description: Job queued
+  /job/{jobId}:
+    get:
+      summary: Get job status
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job status
+  /feedback:
+    post:
+      summary: Submit feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                feedback:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Feedback received

@@ -13,6 +13,10 @@ const { Server } = require('socket.io');
 const IORedis = require('ioredis');
 const { QueueEvents } = require('bullmq');
 const morgan = require('morgan');
+const compression = require('compression');
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const swaggerDocument = YAML.load(path.join(__dirname, 'swagger.yaml'));
 
 // Set FFmpeg path with error handling
 try {
@@ -49,7 +53,24 @@ app.use((req, res, next) => {
 });
 
 // Use Helmet for additional security headers
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", 'https:', 'blob:'],
+      styleSrc: ["'self'", 'https:', 'blob:'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'wss:', 'https:'],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hsts: { maxAge: 31536000, includeSubDomains: true },
+}));
+
+// --- Swagger API Docs ---
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Fixed rate limiting for Replit environment
 const limiter = rateLimit({
@@ -77,6 +98,7 @@ const limiter = rateLimit({
 app.use("/api", limiter);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(compression());
 
 // Serve static files
 app.use(express.static(path.join(__dirname)));
@@ -174,18 +196,24 @@ app.get('/health/dependencies', async (req, res) => {
   res.json(checkDependencies());
 });
 
-// Enhanced YouTube URL validation
+// --- Utility: Async Route Wrapper ---
+function asyncHandler(fn) {
+  return function (req, res, next) {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+
+// --- Utility: Standard Error Response ---
+function errorResponse(res, status, message) {
+  return res.status(status).json({ success: false, error: message });
+}
+
+// --- Modularize Video ID Extraction ---
 function extractVideoId(url) {
   try {
     if (!url || typeof url !== "string") return null;
-
     url = url.trim().replace(/\s+/g, "");
-
-    // If it's already just an ID
-    if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
-      return url;
-    }
-
+    if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
     const patterns = [
       /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
       /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
@@ -195,17 +223,13 @@ function extractVideoId(url) {
       /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
       /[?&]v=([a-zA-Z0-9_-]{11})/,
     ];
-
     for (const pattern of patterns) {
       const match = url.match(pattern);
-      if (match && match[1] && match[1].length === 11) {
-        return match[1];
-      }
+      if (match && match[1] && match[1].length === 11) return match[1];
     }
-
     return null;
   } catch (error) {
-    console.error("Video ID extraction error:", error.message);
+    logger.error("Video ID extraction error:", error.message);
     return null;
   }
 }
@@ -894,6 +918,27 @@ const logger = winston.createLogger({
     ...(process.env.NODE_ENV === 'production' ? [new winston.transports.File({ filename: 'server.log' })] : [])
   ]
 });
+
+// --- Extended Health Endpoint ---
+app.get('/health/extended', asyncHandler(async (req, res) => {
+  const checks = await checkDependenciesAsync();
+  const uptime = process.uptime();
+  const memory = process.memoryUsage();
+  let queueLength = null;
+  if (videoQueue) {
+    try {
+      queueLength = await videoQueue.count();
+    } catch {}
+  }
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime,
+    memory,
+    queueLength,
+    dependencies: checks,
+  });
+}));
 
 // Start server
 server.listen(port, () => {
