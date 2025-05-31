@@ -4,20 +4,22 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import List
 import logging
+import json
 
 load_dotenv()
 
 def parse_cors_origins(value: str) -> List[str]:
+    # If the value is empty or None, allow all origins
     if not value or value.strip() == "":
         return ["*"]
     value = value.strip()
-    # Try to parse as JSON array
-    if value.startswith("[") and value.endswith("]"):
-        import json
-        try:
-            return json.loads(value)
-        except Exception:
-            pass
+    # Try to parse as JSON array (Render.com sometimes sets env as '["*"]')
+    try:
+        parsed = json.loads(value)
+        if isinstance(parsed, list):
+            return [str(v).strip() for v in parsed if str(v).strip()]
+    except Exception:
+        pass
     # Fallback: comma-separated string
     return [v.strip() for v in value.split(",") if v.strip()]
 
@@ -33,7 +35,11 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = Field(default=os.getenv("AWS_SECRET_ACCESS_KEY", ""))
     VIDEO_STORAGE_PATH: str = Field(default=os.getenv("VIDEO_STORAGE_PATH", "/opt/render/project/src/nr1-main/videos"))
     LOG_FILE_PATH: str = Field(default=os.getenv("LOG_FILE_PATH", ""))
-    CORS_ORIGINS: List[str] = Field(default_factory=lambda: parse_cors_origins(os.getenv("CORS_ORIGINS", "*")))
+    CORS_ORIGINS_RAW: str = Field(default=os.getenv("CORS_ORIGINS", "*"))
+
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        return parse_cors_origins(self.CORS_ORIGINS_RAW)
 
 settings = Settings()
 
