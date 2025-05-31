@@ -6,6 +6,7 @@ const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const morgan = require('morgan');
 
 // Set FFmpeg path with error handling
 try {
@@ -108,6 +109,17 @@ function cleanupOldFiles() {
 
 setInterval(cleanupOldFiles, 30 * 60 * 1000);
 
+// Log errors to a file in production
+const logStream = process.env.NODE_ENV === 'production' ? fs.createWriteStream(path.join(__dirname, 'server.log'), { flags: 'a' }) : null;
+if (logStream) {
+    app.use(morgan('combined', { stream: logStream }));
+}
+
+// Add file size and duration limits to uploads/downloads for extra safety
+const MAX_FILE_SIZE_MB = 200;
+const MAX_DURATION_SEC = 1800;
+const MIN_DURATION_SEC = 10;
+
 // Enhanced YouTube URL validation
 function extractVideoId(url) {
     try {
@@ -200,13 +212,13 @@ async function getVideoInfo(videoId) {
                 const duration = parseInt(info.videoDetails.lengthSeconds) || 0;
                 console.log('⏱️ Video duration:', duration, 'seconds');
 
-                if (duration > 1800) {
-                    reject(new Error('Video is too long. Maximum duration is 30 minutes.'));
+                if (duration > MAX_DURATION_SEC) {
+                    reject(new Error(`Video is too long. Maximum duration is ${MAX_DURATION_SEC / 60} minutes.`));
                     return;
                 }
 
-                if (duration < 10) {
-                    reject(new Error('Video is too short. Minimum duration is 10 seconds.'));
+                if (duration < MIN_DURATION_SEC) {
+                    reject(new Error(`Video is too short. Minimum duration is ${MIN_DURATION_SEC} seconds.`));
                     return;
                 }
 

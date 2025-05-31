@@ -1003,7 +1003,30 @@
         }
 
         function showExample() {
-            showNotification('Example feature coming soon!', 'info');
+            // Show a real example video if available
+            const resultDiv = document.getElementById('result');
+            const videoUrl = '/api/videos/sample';
+            resultDiv.innerHTML = `
+                <div class="result-success">
+                    <h2><i class="fas fa-play"></i> Example Viral Clip</h2>
+                    <div class="video-container">
+                        <video controls preload="metadata" playsinline>
+                            <source src="${videoUrl}" type="video/mp4">
+                            Your browser does not support video playback.
+                        </video>
+                    </div>
+                    <p style="margin: 20px 0; font-weight: 500;">Perfect for:</p>
+                    <div class="platforms">
+                        <div class="platform-icon tiktok" title="TikTok"><i class="fab fa-tiktok"></i></div>
+                        <div class="platform-icon instagram" title="Instagram"><i class="fab fa-instagram"></i></div>
+                        <div class="platform-icon youtube" title="YouTube"><i class="fab fa-youtube"></i></div>
+                        <div class="platform-icon twitter" title="Twitter"><i class="fab fa-twitter"></i></div>
+                    </div>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+            showNotification('Example viral clip loaded!', 'success');
         }
 
         function shareVideo(videoUrl) {
