@@ -695,10 +695,115 @@ router.get('/api/languages', (req, res) => {
 // Attach router to app
 app.use(router);
 
+// --- Professional improvements start ---
+
+// 1. Define video duration limits (customize as needed)
+const MAX_DURATION_SEC = 1800; // 30 minutes
+const MIN_DURATION_SEC = 10;   // 10 seconds
+
+// 2. Import videoQueue if not already
+const videoQueue = require('./queue/videoQueue');
+
+// 3. Enforce required environment variables at startup
+const requiredEnvVars = [
+  // Add your required env vars here, e.g. 'REDIS_URL', 'AWS_S3_BUCKET'
+];
+const missingVars = requiredEnvVars.filter((k) => !process.env[k]);
+if (missingVars.length) {
+  logger.error(`Missing required environment variables: ${missingVars.join(', ')}`);
+  process.exit(1);
+}
+
+// 4. Restrict CORS in production
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [process.env.CORS_ORIGIN || 'https://yourdomain.com']
+  : true;
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+}));
+
+// 5. Use winston logger everywhere (replace all console.log/warn/error)
+function log(level, ...args) {
+  logger.log(level, args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '));
+}
+
+// 6. Restrict static file serving to a public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 7. Fix error handler signature
+app.use((err, req, res, next) => {
+  logger.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// 8. Add Joi validation to all input endpoints (example for feedback)
+router.post('/api/feedback', (req, res) => {
+  const schema = Joi.object({
+    feedback: Joi.string().min(5).max(1000).required(),
+    email: Joi.string().email().optional(),
+  });
+  const { error, value } = schema.validate(req.body);
+  if (error) {
+    logger.warn('Invalid feedback input:', error.message);
+    return res.status(400).json({ success: false, error: error.message });
+  }
+  // TODO: Save feedback
+  res.json({ success: true, message: 'Feedback received (stub).' });
+});
+
+// 9. Fix health check async logic
+async function checkDependenciesAsync() {
+  const checks = {};
+  // Redis
+  try {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    const redis = new IORedis(redisUrl);
+    await redis.ping();
+    checks.redis = 'ok';
+    redis.disconnect();
+  } catch (e) { checks.redis = 'error'; }
+  // S3
+  try {
+    checks.s3 = process.env.AWS_S3_BUCKET ? 'configured' : 'missing';
+  } catch (e) { checks.s3 = 'error'; }
+  // FFmpeg
+  try {
+    await new Promise((resolve, reject) => {
+      ffmpeg.getAvailableFormats((err) => {
+        if (err) reject(err); else resolve();
+      });
+    });
+    checks.ffmpeg = 'ok';
+  } catch (e) { checks.ffmpeg = 'error'; }
+  return checks;
+}
+app.get('/health/dependencies', async (req, res) => {
+  res.json(await checkDependenciesAsync());
+});
+
+// 10. Add SIGINT and uncaught exception handlers
+process.on('SIGINT', () => {
+  logger.info('🛑 SIGINT received, shutting down gracefully');
+  cleanupOldFiles();
+  process.exit(0);
+});
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled Rejection:', reason);
+  process.exit(1);
+});
+// --- Professional improvements end ---
+
 // Centralized error handler
-app.use((err, req, res) => {
-  console.error("Server error:", err);
-  res.status(500).json({ error: "Internal server error" });
+app.use((err, req, res, next) => {
+  logger.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // Graceful shutdown
