@@ -172,11 +172,29 @@ app.use((err, req, res, next) => {
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*', methods: ['GET', 'POST'] } });
 const videoQueueEvents = new QueueEvents('video-processing', {
-  connection: new IORedis(process.env.REDIS_URL || 'redis://localhost:6379'),
+  connection: new IORedis(process.env.REDIS_URL),
 });
-videoQueueEvents.on('progress', ({ jobId, data }) => { io.emit(`job-progress-${jobId}`, data); });
-videoQueueEvents.on('completed', ({ jobId, returnvalue }) => { io.emit(`job-completed-${jobId}`, returnvalue); });
-videoQueueEvents.on('failed', ({ jobId, failedReason }) => { io.emit(`job-failed-${jobId}`, failedReason); });
+videoQueueEvents.on('progress', ({ jobId, data }) => {
+  try {
+    io.emit(`job-progress-${jobId}`, data);
+  } catch (err) {
+    logWithLevel('error', `Error emitting job-progress-${jobId}: ${err.stack || err}`);
+  }
+});
+videoQueueEvents.on('completed', ({ jobId, returnvalue }) => {
+  try {
+    io.emit(`job-completed-${jobId}`, returnvalue);
+  } catch (err) {
+    logWithLevel('error', `Error emitting job-completed-${jobId}: ${err.stack || err}`);
+  }
+});
+videoQueueEvents.on('failed', ({ jobId, failedReason }) => {
+  try {
+    io.emit(`job-failed-${jobId}`, failedReason);
+  } catch (err) {
+    logWithLevel('error', `Error emitting job-failed-${jobId}: ${err.stack || err}`);
+  }
+});
 
 // --- Request Metrics ---
 let totalRequests = 0;
@@ -435,4 +453,23 @@ if (typeof process.getuid === 'function' && process.getuid() === 0) {
 // Audit: Add a warning if NODE_ENV is not 'production'. This is a common Render.com misconfiguration.
 if (process.env.NODE_ENV !== 'production') {
   logWithLevel('warn', '⚠️ NODE_ENV is not set to production. This is not recommended for cloud deployment.');
+}
+
+// --- Audit: Check video directory permissions at startup ---
+function checkVideoDirPermissions() {
+  try {
+    const stat = fs.statSync(VIDEO_STORAGE_PATH);
+    // Check for world-writable (octal 0o777)
+    if ((stat.mode & 0o777) === 0o777) {
+      logWithLevel('warn', `⚠️ VIDEO_STORAGE_PATH (${VIDEO_STORAGE_PATH}) is world-writable (777). This is insecure for production.`);
+    }
+  } catch (e) {
+    logWithLevel('warn', `Could not check permissions for VIDEO_STORAGE_PATH: ${e.message}`);
+  }
+}
+checkVideoDirPermissions();
+
+// --- Audit: Add a startup check to ensure the process is not running in debug mode (NODE_ENV=development or NODE_OPTIONS includes --inspect). Log a warning if so, as this is a security risk in production.
+if (process.env.NODE_ENV === 'development' || (process.env.NODE_OPTIONS && process.env.NODE_OPTIONS.includes('--inspect'))) {
+  logWithLevel('warn', '⚠️ The server is running in debug mode. This is not recommended for production or cloud deployment.');
 }
