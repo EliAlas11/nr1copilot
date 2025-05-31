@@ -26,7 +26,8 @@ app.add_middleware(
 )
 
 # Serve static files
-app.mount("/public", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "public")), name="public")
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "public")
+app.mount("/public", StaticFiles(directory=STATIC_DIR), name="public")
 
 # Health check endpoints
 @app.get("/health", tags=["Health"])
