@@ -10,12 +10,14 @@ def parse_cors_origins(value: str) -> List[str]:
     if not value or value.strip() == "":
         return ["*"]
     value = value.strip()
+    # Try to parse as JSON array
     if value.startswith("[") and value.endswith("]"):
         import json
         try:
             return json.loads(value)
         except Exception:
             pass
+    # Fallback: comma-separated string
     return [v.strip() for v in value.split(",") if v.strip()]
 
 class Settings(BaseSettings):
