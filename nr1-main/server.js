@@ -133,34 +133,26 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
-// --- Startup diagnostics ---
+// --- Bootstrap and Diagnostics ---
+const { bootstrapDiagnostics, gracefulShutdown } = require('./utils/bootstrap');
+
 (async () => {
-  logWithLevel('info', 'Starting NR1 Copilot backend diagnostics...');
-  try {
-    const health = await checkDependencies();
-    logWithLevel('info', 'Dependency health:', JSON.stringify(health));
-  } catch (e) {
-    logWithLevel('warn', 'Dependency health check failed:', e.message);
-  }
+  await bootstrapDiagnostics({
+    port,
+    env: process.env.NODE_ENV,
+    mongoUri,
+    redisUrl: process.env.REDIS_URL,
+    s3Bucket: process.env.AWS_S3_BUCKET,
+    jwtSet: !!process.env.JWT_SECRET,
+  });
+  server.listen(port, () => {
+    logWithLevel('info', `🚀 Server running on http://localhost:${port}`);
+  });
 })();
 
-// --- Centralized error handler ---
-app.use((err, req, res, next) => {
-  logWithLevel('error', 'Server error:', err.stack || err);
-  res.status(500).json({ error: 'Internal server error' });
-});
+gracefulShutdown(server, mongoose, logWithLevel);
 
-// --- Graceful shutdown ---
-process.on('SIGTERM', () => {
-  logWithLevel('info', 'SIGTERM received, shutting down gracefully');
-  mongoose.connection.close(() => {
-    logWithLevel('info', 'MongoDB connection closed');
-    process.exit(0);
-  });
-});
-
-server.listen(port, () => {
-  logWithLevel('info', `🚀 Server running on http://localhost:${port}`);
-});
-
-logWithLevel('warn', 'server.js is deprecated. Please use app.js as the main entry point for the new professional backend.');
+// Print deprecation warning at the end
+setTimeout(() => {
+  logWithLevel('warn', 'server.js is deprecated. Please use app.js as the main entry point for the new professional backend.');
+}, 1000);
