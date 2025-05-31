@@ -2,10 +2,11 @@
 const { Worker } = require('bullmq');
 const IORedis = require('ioredis');
 const path = require('path');
-const ytdl = require('ytdl-core');
 const fs = require('fs');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { Worker: NodeWorker } = require('worker_threads');
+const videoService = require('./services/videoService');
+const logger = require('./config/logger');
 
 // ENVIRONMENT VALIDATION
 const requiredEnv = [
@@ -78,35 +79,11 @@ const worker = new Worker(
     let downloadedPath = null;
     let outputPath = null;
     try {
-      // Download video
-      const videoUrl = url || `https://www.youtube.com/watch?v=${videoId}`;
-      downloadedPath = path.join(tempDir, `${videoId}_original.mp4`);
-      if (!fs.existsSync(downloadedPath)) {
-        await new Promise((resolve, reject) => {
-          const stream = ytdl(videoUrl, {
-            quality: 'highest',
-            filter: 'audioandvideo',
-          });
-          const writeStream = fs.createWriteStream(downloadedPath);
-          stream.pipe(writeStream);
-          stream.on('end', resolve);
-          stream.on('error', reject);
-          writeStream.on('error', reject);
-        });
-      }
-      // Process video (create viral clip)
-      outputPath = path.join(processedDir, `${videoId}_${Date.now()}.mp4`);
-      await processInWorker({
-        inputPath: downloadedPath,
-        outputPath,
-        videoId,
-        job,
-      });
-      // After processing, upload to S3
-      const s3Key = `processed/${path.basename(outputPath)}`;
-      const s3Url = await uploadToS3(outputPath, s3Key);
-      return { status: 'done', output: outputPath, s3Url };
+      // Delegate to videoService for all processing
+      const result = await videoService.processVideoJob({ videoId, url, job });
+      return result;
     } catch (err) {
+      logger.error(`Job ${job.id} failed:`, err);
       if (outputPath && fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
       throw err;
     }
@@ -115,20 +92,21 @@ const worker = new Worker(
 );
 
 worker.on('completed', (job) => {
-  console.log(`Job ${job.id} completed`);
+  logger.info(`Job ${job.id} completed`);
+  // Add audit logging/monitoring here
 });
 worker.on('failed', (job, err) => {
-  console.error(`Job ${job.id} failed:`, err);
+  logger.error(`Job ${job.id} failed:`, err);
+  // Add alerting/monitoring here
 });
 
-// Top-level error handler
 process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err);
-  // TODO: Add alerting/monitoring here
+  logger.error('❌ Uncaught Exception:', err);
+  // Add alerting/monitoring here
 });
 process.on('unhandledRejection', (reason) => {
-  console.error('❌ Unhandled Rejection:', reason);
-  // TODO: Add alerting/monitoring here
+  logger.error('❌ Unhandled Rejection:', reason);
+  // Add alerting/monitoring here
 });
 
 // TODO: Add retry logic for failed jobs

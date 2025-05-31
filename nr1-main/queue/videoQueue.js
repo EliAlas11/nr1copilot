@@ -1,6 +1,12 @@
 // BullMQ queue setup for video processing
-const { Queue } = require('bullmq');
 const IORedis = require('ioredis');
+
+function createVideoQueue(connection) {
+  const { Queue } = require('bullmq');
+  const queue = new Queue('video-processing', { connection });
+  // Add monitoring/alerting hooks here if needed
+  return queue;
+}
 
 let connection;
 try {
@@ -13,9 +19,10 @@ try {
   // TODO: Add fallback or degrade gracefully
 }
 
-const videoQueue = new Queue('video-processing', { connection });
+const videoQueue = createVideoQueue(connection);
 
 // TODO: Add retry logic for failed jobs
 // TODO: Add monitoring/alerting hooks
 
 module.exports = videoQueue;
+module.exports.createVideoQueue = createVideoQueue;

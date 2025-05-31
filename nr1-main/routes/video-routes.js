@@ -1,30 +1,43 @@
 const express = require('express');
 const router = express.Router();
 const videoController = require('../controllers/videoController');
+const asyncHandler = require('../utils/asyncHandler');
 
 /**
- * Route for validating YouTube URL
- * Example: POST /videos/validate { url }
+ * @route POST /videos/validate
+ * @desc Validate YouTube URL
  */
-router.post('/validate', videoController.validate);
+router.post('/validate', asyncHandler(videoController.validate));
 
 /**
- * Route for getting video information
- * Example: GET /videos/info/:videoId
+ * @route GET /videos/info/:videoId
+ * @desc Get video information
  */
-router.get('/info/:videoId', videoController.info);
+router.get('/info/:videoId', asyncHandler(videoController.info));
 
 /**
- * Route for submitting a video processing job
- * Example: POST /videos/process { videoId, url }
+ * @route POST /videos/process
+ * @desc Submit a video processing job
  */
-router.post('/process', videoController.process);
+router.post('/process', asyncHandler(videoController.process));
 
 /**
- * Route for checking job status
- * Example: GET /videos/job/:jobId
+ * @route GET /videos/job/:jobId
+ * @desc Check job status
  */
-router.get('/job/:jobId', videoController.checkJobStatus);
+router.get('/job/:jobId', asyncHandler(videoController.checkJobStatus));
+
+/**
+ * @route GET /videos/serve/:id
+ * @desc Serve processed video
+ */
+router.get('/serve/:id', asyncHandler(videoController.serve));
+
+/**
+ * @route GET /videos/sample
+ * @desc Serve sample video
+ */
+router.get('/sample', asyncHandler(videoController.sample));
 
 // Monitoring/alerting placeholder
 function notifyMonitoring(event, details) {
