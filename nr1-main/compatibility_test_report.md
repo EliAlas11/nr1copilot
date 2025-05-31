@@ -1,4 +1,4 @@
-# Compatibility Test Report (English, Python/FastAPI)
+# Compatibility Test Report (Python/FastAPI)
 
 ## Summary
 

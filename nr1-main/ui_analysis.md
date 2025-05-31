@@ -1,1 +1,1 @@
-# This document is obsolete. The backend and all business logic are now implemented in Python using FastAPI. All UI/CSS analysis for the old frontend is no longer relevant. For the current backend and API, see the FastAPI app and service modules.
+# This document is obsolete. All UI/CSS analysis for the old frontend is no longer relevant. All backend logic is now implemented in Python using FastAPI. For the current backend and API, see the FastAPI app and service modules.
