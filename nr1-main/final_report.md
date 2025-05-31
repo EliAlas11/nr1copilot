@@ -2,7 +2,7 @@
 
 ## Project Summary
 
-A robust backend server was developed for the Viral Clip Generator web application, enabling users to convert long YouTube videos into short, engaging clips suitable for social media platforms. The backend is implemented in Python using FastAPI, supporting video download, analysis, processing, and audio effects integration.
+A robust backend server was developed for the Viral Clip Generator web application, enabling users to convert long YouTube videos into short, engaging clips suitable for social media platforms. The backend is implemented in Python using FastAPI, supporting video download, analysis, processing, and audio effects integration. All documentation is in English and the backend is fully compatible with Render.com.
 
 ## Key Achievements
 
@@ -51,6 +51,7 @@ A robust backend server was developed for the Viral Clip Generator web applicati
 - All Node.js/JavaScript code has been removed
 - All business logic, integrations, and endpoints are now Python/FastAPI
 - All documentation and code are in English
+- The backend is fully compatible with Render.com
 
 ---
 

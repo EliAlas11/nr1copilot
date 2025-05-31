@@ -9,4 +9,4 @@
 - [x] Optimize performance and reduce resource usage
 - [x] Deploy the backend for public testing via Render.com
 
-# All tasks and notes are now Python/FastAPI only. No references to Node.js, JavaScript, or non-English content remain.
+All tasks and notes are now Python/FastAPI only. No references to Node.js, JavaScript, or non-English content remain. The backend is fully compatible with Render.com.
