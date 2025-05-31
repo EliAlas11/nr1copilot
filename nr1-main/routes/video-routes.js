@@ -1,10 +1,13 @@
-
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 
-// Route for getting video information
+/**
+ * Route for getting video information
+ * Returns the processed video file if available, otherwise a demo response.
+ * Example: GET /videos/:id
+ */
 router.get('/videos/:id', (req, res) => {
   const { id } = req.params;
   
@@ -24,7 +27,11 @@ router.get('/videos/:id', (req, res) => {
   }
 });
 
-// Route for video processing status
+/**
+ * Route for video processing status
+ * Returns a status object for the requested video.
+ * Example: GET /status/:id
+ */
 router.get('/status/:id', (req, res) => {
   const { id } = req.params;
   
@@ -35,4 +42,5 @@ router.get('/status/:id', (req, res) => {
   });
 });
 
+// Export the router for use in the main server
 module.exports = router;

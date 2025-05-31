@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viral Clip Generator - AI-Powered YouTube to TikTok Converter</title>
     <meta name="description" content="Transform YouTube videos into viral clips perfect for TikTok, Instagram Reels, and YouTube Shorts with AI-powered editing.">
+    <meta name="keywords" content="AI, YouTube, TikTok, Viral Clips, Video Editing, Shorts, Reels">
+    <meta name="author" content="EliAlas11">
+    <!-- Improved accessibility and SEO -->
+    <link rel="icon" href="favicon.ico">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -493,9 +497,33 @@
         .notification.warning {
             background: var(--warning);
         }
+
+        .skip-link {
+            position: absolute;
+            left: -999px;
+            top: auto;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            z-index: 100;
+        }
+        .skip-link:focus {
+            left: 10px;
+            top: 10px;
+            width: auto;
+            height: auto;
+            background: #fff;
+            color: #333;
+            padding: 8px 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
+    <!-- Improved: Added skip link for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <button class="theme-toggle" id="themeToggle">
         <i class="fas fa-moon"></i>
     </button>
@@ -554,131 +582,132 @@
         </div>
     </div>
 
-    <script>
-        // Configuration
-        const API_BASE_URL = '/api';
-        let currentVideoId = null;
-        let validationTimeout = null;
+    <main id="main-content">
+        <script>
+            // Configuration
+            const API_BASE_URL = '/api';
+            let currentVideoId = null;
+            let validationTimeout = null;
 
-        // Theme management
-        function setupTheme() {
-            const themeToggle = document.getElementById('themeToggle');
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+            // Theme management
+            function setupTheme() {
+                const themeToggle = document.getElementById('themeToggle');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
 
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark' || (!savedTheme && prefersDark.matches)) {
-                document.body.classList.add('dark-mode');
-                themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-            }
-
-            themeToggle.addEventListener('click', () => {
-                document.body.classList.toggle('dark-mode');
-
-                if (document.body.classList.contains('dark-mode')) {
-                    localStorage.setItem('theme', 'dark');
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'dark' || (!savedTheme && prefersDark.matches)) {
+                    document.body.classList.add('dark-mode');
                     themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-                } else {
-                    localStorage.setItem('theme', 'light');
-                    themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
                 }
-            });
-        }
 
-        // Notification system
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
+                themeToggle.addEventListener('click', () => {
+                    document.body.classList.toggle('dark-mode');
 
-            setTimeout(() => {
-                notification.style.animation = 'fadeOut 0.3s ease-out';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
+                    if (document.body.classList.contains('dark-mode')) {
+                        localStorage.setItem('theme', 'dark');
+                        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+                    } else {
+                        localStorage.setItem('theme', 'light');
+                        themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
                     }
-                }, 300);
-            }, 3000);
-        }
-
-        // Progress management
-        function updateProgress(percent, text = '') {
-            const progressContainer = document.getElementById('progressContainer');
-            const progressFill = document.getElementById('progressFill');
-            const progressText = document.getElementById('progressText');
-
-            if (percent > 0) {
-                progressContainer.style.display = 'block';
-                progressFill.style.width = percent + '%';
-                progressText.textContent = text || `${percent}%`;
-            } else {
-                progressContainer.style.display = 'none';
-            }
-        }
-
-        // Enhanced YouTube ID extraction
-        function extractVideoId(url) {
-            if (!url || typeof url !== 'string') return null;
-
-            url = url.trim().replace(/\s+/g, '');
-
-            if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
-                return url;
+                });
             }
 
-            const patterns = [
-                /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
-                /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-                /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-                /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-                /[?&]v=([a-zA-Z0-9_-]{11})/
-            ];
+            // Notification system
+            function showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                document.body.appendChild(notification);
 
-            for (const pattern of patterns) {
-                const match = url.match(pattern);
-                if (match && match[1] && match[1].length === 11) {
-                    return match[1];
+                setTimeout(() => {
+                    notification.style.animation = 'fadeOut 0.3s ease-out';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 3000);
+            }
+
+            // Progress management
+            function updateProgress(percent, text = '') {
+                const progressContainer = document.getElementById('progressContainer');
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+
+                if (percent > 0) {
+                    progressContainer.style.display = 'block';
+                    progressFill.style.width = percent + '%';
+                    progressText.textContent = text || `${percent}%`;
+                } else {
+                    progressContainer.style.display = 'none';
                 }
             }
 
-            return null;
-        }
+            // Enhanced YouTube ID extraction
+            function extractVideoId(url) {
+                if (!url || typeof url !== 'string') return null;
 
-        // Enhanced URL validation with visual feedback
-        function setupURLValidation() {
-            const urlInput = document.getElementById('youtubeUrl');
-            const validationStatus = document.getElementById('validationStatus');
-            const validationText = document.getElementById('validationText');
+                url = url.trim().replace(/\s+/g, '');
 
-            urlInput.addEventListener('input', function() {
-                const url = this.value.trim();
-
-                if (validationTimeout) {
-                    clearTimeout(validationTimeout);
+                if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
+                    return url;
                 }
 
-                if (!url) {
-                    validationStatus.style.display = 'none';
-                    this.style.borderColor = '';
-                    return;
+                const patterns = [
+                    /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
+                    /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+                    /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+                    /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+                    /[?&]v=([a-zA-Z0-9_-]{11})/
+                ];
+
+                for (const pattern of patterns) {
+                    const match = url.match(pattern);
+                    if (match && match[1] && match[1].length === 11) {
+                        return match[1];
+                    }
                 }
 
-                const videoId = extractVideoId(url);
+                return null;
+            }
 
-                if (url.length > 10 && !videoId) {
-                    showValidationStatus('invalid', 'Invalid YouTube URL format');
-                    this.style.borderColor = '#fd746c';
-                } else if (videoId) {
-                    showValidationStatus('valid', 'Valid YouTube URL detected');
-                    this.style.borderColor = '#4facfe';
+            // Enhanced URL validation with visual feedback
+            function setupURLValidation() {
+                const urlInput = document.getElementById('youtubeUrl');
+                const validationStatus = document.getElementById('validationStatus');
+                const validationText = document.getElementById('validationText');
 
-                    // Server validation with debounce
-                    validationTimeout = setTimeout(async () => {
-                        try {
-                            const response = await fetch(`${API_BASE_URL}/validate`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ url: url })
+                urlInput.addEventListener('input', function() {
+                    const url = this.value.trim();
+
+                    if (validationTimeout) {
+                        clearTimeout(validationTimeout);
+                    }
+
+                    if (!url) {
+                        validationStatus.style.display = 'none';
+                        this.style.borderColor = '';
+                        return;
+                    }
+
+                    const videoId = extractVideoId(url);
+
+                    if (url.length > 10 && !videoId) {
+                        showValidationStatus('invalid', 'Invalid YouTube URL format');
+                        this.style.borderColor = '#fd746c';
+                    } else if (videoId) {
+                        showValidationStatus('valid', 'Valid YouTube URL detected');
+                        this.style.borderColor = '#4facfe';
+
+                        // Server validation with debounce
+                        validationTimeout = setTimeout(async () => {
+                            try {
+                                const response = await fetch(`${API_BASE_URL}/validate`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ url: url })
                             });
 
                             const data = await response.json();
@@ -1058,5 +1087,6 @@
         `;
         document.head.appendChild(style);
     </script>
+    </main>
 </body>
 </html>

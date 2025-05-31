@@ -5,6 +5,7 @@ const fs = require('fs');
 const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 
 // Set FFmpeg path with error handling
 try {
@@ -37,6 +38,9 @@ app.use((req, res, next) => {
     res.setHeader('X-XSS-Protection', '1; mode=block');
     next();
 });
+
+// Use Helmet for additional security headers
+app.use(helmet());
 
 // Fixed rate limiting for Replit environment
 const limiter = rateLimit({
@@ -741,19 +745,10 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Error handling
+// Centralized error handler
 app.use((err, req, res, next) => {
-    console.error('❌ Server error:', err);
-    res.status(500).json({ 
-        error: 'Internal server error'
-    });
-});
-
-app.use((req, res) => {
-    res.status(404).json({ 
-        error: 'Not found',
-        path: req.path 
-    });
+    console.error('Server error:', err);
+    res.status(500).json({ error: 'Internal server error' });
 });
 
 // Graceful shutdown
@@ -764,10 +759,7 @@ process.on('SIGTERM', () => {
 });
 
 // Start server
-app.listen(port, '0.0.0.0', () => {
-    console.log(`🚀 Viral Clip Generator Server running on port ${port}`);
-    console.log(`🌐 Access: http://0.0.0.0:${port}`);
-    console.log(`❤️ Health: http://0.0.0.0:${port}/health`);
-
+app.listen(port, () => {
+    console.log(`🚀 Server running on http://localhost:${port}`);
     cleanupOldFiles();
 });
