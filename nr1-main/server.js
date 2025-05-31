@@ -210,23 +210,32 @@ setupGracefulShutdown(server);
 
 // --- Advanced Startup Diagnostics and Banner ---
 (async () => {
+  const bootStart = Date.now();
   try {
-    logWithLevel('info', '==============================');
-    logWithLevel('info', '   🚀 Starting NR1 Copilot...   ');
-    logWithLevel('info', '==============================');
+    logWithTimestamp('info', '==============================');
+    logWithTimestamp('info', '   🚀 Starting NR1 Copilot...   ');
+    logWithTimestamp('info', '==============================');
+    logWithTimestamp('info', `Environment: ${process.env.NODE_ENV || 'development'}`);
+    logWithTimestamp('info', `Port: ${port}`);
+    logWithTimestamp('info', `Mongo URI: ${process.env.MONGO_URI ? '[set]' : '[not set]'}`);
+    logWithTimestamp('info', `Redis URL: ${process.env.REDIS_URL ? '[set]' : '[not set]'}`);
+    logWithTimestamp('info', `S3 Bucket: ${process.env.AWS_S3_BUCKET ? '[set]' : '[not set]'}`);
+    logWithTimestamp('info', `JWT Secret: ${process.env.JWT_SECRET ? '[set]' : '[not set]'}`);
     await bootstrapServer({
       app,
       server,
       port,
       mongoUri: process.env.MONGO_URI,
-      logWithLevel,
+      logWithLevel: logWithTimestamp,
       checkDependencies,
       runtimeBanner: require('./utils/runtime').runtimeBanner,
       printDeprecationWarning: require('./utils/runtime').printDeprecationWarning,
     });
-    logWithLevel('info', `🚀 Server bootstrap complete. Listening on port ${port}`);
+    const bootTime = ((Date.now() - bootStart) / 1000).toFixed(2);
+    logWithTimestamp('info', `🚀 Server bootstrap complete. Listening on port ${port}`);
+    logWithTimestamp('info', `Boot time: ${bootTime}s`);
   } catch (err) {
-    logWithLevel('error', '❌ Fatal error during server bootstrap:', err);
+    logWithTimestamp('error', '❌ Fatal error during server bootstrap:', err);
     process.exit(1);
   }
 })();
