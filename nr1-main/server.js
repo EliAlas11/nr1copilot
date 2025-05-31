@@ -28,6 +28,7 @@ const i18nRoutes = require('./routes/i18n-routes');
 const authRoutes = require('./routes/auth-routes');
 const { logWithLevel } = require('./utils/logger');
 const { checkDependencies } = require('./utils/health');
+const { bootstrapServer } = require('./utils/bootstrap');
 
 // Set FFmpeg path with error handling
 try {
@@ -78,35 +79,16 @@ videoQueueEvents.on('progress', ({ jobId, data }) => { io.emit(`job-progress-${j
 videoQueueEvents.on('completed', ({ jobId, returnvalue }) => { io.emit(`job-completed-${jobId}`, returnvalue); });
 videoQueueEvents.on('failed', ({ jobId, failedReason }) => { io.emit(`job-failed-${jobId}`, failedReason); });
 
-// --- MongoDB connection ---
-const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/nr1main';
-mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => logWithLevel('info', '✅ MongoDB connected'))
-  .catch((err) => {
-    logWithLevel('error', '❌ MongoDB connection error:', err.message);
-    process.exit(1);
-  });
-if (!process.env.JWT_SECRET) {
-  logWithLevel('error', 'JWT_SECRET is required in environment');
-  process.exit(1);
-}
-
-// --- Runtime Banner, Diagnostics, and Deprecation ---
-const { runtimeBanner, printDeprecationWarning } = require('./utils/runtime');
-
+// --- Pure Orchestrator Startup ---
 (async () => {
-  await runtimeBanner({
+  await bootstrapServer({
+    app,
+    server,
     port,
-    env: process.env.NODE_ENV,
     mongoUri,
-    redisUrl: process.env.REDIS_URL,
-    s3Bucket: process.env.AWS_S3_BUCKET,
-    jwtSet: !!process.env.JWT_SECRET,
-    version: require('../package.json').version,
-    date: new Date().toISOString(),
+    logWithLevel,
+    checkDependencies,
+    runtimeBanner: require('./utils/runtime').runtimeBanner,
+    printDeprecationWarning: require('./utils/runtime').printDeprecationWarning,
   });
-  server.listen(port, () => {
-    logWithLevel('info', `🚀 Server running on http://localhost:${port}`);
-  });
-  printDeprecationWarning(logWithLevel);
 })();
