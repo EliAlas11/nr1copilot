@@ -1,4 +1,4 @@
-# Python/FastAPI Backend Workflow (Current)
+# Python/FastAPI Backend Architecture and Workflow
 
 This document describes the backend architecture and workflow for the Viral Clip Generator, implemented entirely in Python using FastAPI. All previous JavaScript/Node.js logic has been fully replaced with Python code. The backend is modular, production-ready, and deployable on Render.com.
 
