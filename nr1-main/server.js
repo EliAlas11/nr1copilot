@@ -684,6 +684,7 @@ app.get('/health', (req, res) => {
   });
 });
 
+<<<<<<< HEAD
 // Attach all v1 API routes for world-class versioning
 const videoRoutes = require('./routes/video-routes');
 const feedbackRoutes = require('./routes/feedback-routes');
@@ -852,6 +853,42 @@ process.on('unhandledRejection', (reason) => {
 app.use((err, req, res, next) => {
   logWithLevel('error', 'Server error:', err);
   res.status(500).json({ error: 'Internal server error' });
+=======
+// --- Professional API stubs for new features ---
+// User authentication (stub)
+app.post('/api/auth/login', (req, res) => {
+  logger.info('Login endpoint hit');
+  // TODO: Implement real authentication
+  res.json({ success: false, message: 'Login not implemented.' });
+});
+app.post('/api/auth/signup', (req, res) => {
+  logger.info('Signup endpoint hit');
+  // TODO: Implement real signup
+  res.json({ success: false, message: 'Signup not implemented.' });
+});
+// Analytics dashboard (stub)
+app.get('/api/analytics', (req, res) => {
+  logger.info('Analytics endpoint hit');
+  // TODO: Return real analytics
+  res.json({ success: true, data: { totalClips: 0, users: 0, downloads: 0 } });
+});
+// Feedback (stub)
+app.post('/api/feedback', (req, res) => {
+  logger.info('Feedback endpoint hit');
+  // TODO: Save feedback
+  res.json({ success: true, message: 'Feedback received (stub).' });
+});
+// Language/i18n (stub)
+app.get('/api/languages', (req, res) => {
+  logger.info('Languages endpoint hit');
+  res.json({ success: true, languages: ['en', 'es', 'fr', 'de', 'zh'] });
+});
+
+// Centralized error handler (must have 4 args for Express)
+app.use((err, req, res, next) => {
+  logger.error("Server error:", err);
+  res.status(500).json({ error: "Internal server error" });
+>>>>>>> 70be700 (Refactor: clean API stubs, remove duplicate router, improve error handling, clarify structure, and enhance logging)
 });
 
 // Graceful shutdown
