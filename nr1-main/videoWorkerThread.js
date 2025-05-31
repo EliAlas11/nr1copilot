@@ -1,7 +1,6 @@
 // videoWorkerThread.js
 const { parentPort, workerData } = require("worker_threads");
 const ffmpeg = require("fluent-ffmpeg");
-const fs = require("fs");
 
 // Example: workerData = { inputPath, outputPath, ... }
 ffmpeg(workerData.inputPath)

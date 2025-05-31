@@ -1,14 +1,11 @@
 // BullMQ worker for processing video jobs
-const { Worker, Queue, QueueEvents } = require("bullmq");
+const { Worker } = require("bullmq");
 const IORedis = require("ioredis");
 const path = require("path");
-const ffmpeg = require("fluent-ffmpeg");
 const ytdl = require("ytdl-core");
 const fs = require("fs");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { Worker: NodeWorker } = require("worker_threads");
-
-const videoQueue = require("./queue/videoQueue");
 
 const connection = new IORedis(
   process.env.REDIS_URL || "redis://localhost:6379",

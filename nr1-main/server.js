@@ -11,19 +11,13 @@ const videoQueue = require("./queue/videoQueue");
 const http = require("http");
 const { Server } = require("socket.io");
 const { QueueEvents } = require("bullmq");
-const {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-} = require("@aws-sdk/client-s3");
-const Redis = require("ioredis");
 
 // Set FFmpeg path with error handling
 try {
   const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
   ffmpeg.setFfmpegPath(ffmpegPath);
   console.log("✅ FFmpeg configured successfully");
-} catch (error) {
+} catch {
   console.warn("⚠️ FFmpeg installer not found, using system FFmpeg");
   // Will use system FFmpeg if available
 }
@@ -131,11 +125,6 @@ const logStream =
 if (logStream) {
   app.use(morgan("combined", { stream: logStream }));
 }
-
-// Add file size and duration limits to uploads/downloads for extra safety
-const MAX_FILE_SIZE_MB = 200;
-const MAX_DURATION_SEC = 1800;
-const MIN_DURATION_SEC = 10;
 
 // Enhanced YouTube URL validation
 function extractVideoId(url) {
@@ -344,249 +333,6 @@ async function getVideoInfo(videoId) {
   });
 }
 
-// Enhanced video download
-async function downloadVideo(videoId) {
-  return new Promise((resolve, reject) => {
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
-    const outputPath = path.join(tempDir, `${videoId}_original.mp4`);
-
-    console.log("📥 Starting download for video:", videoId);
-
-    // Check if file already exists
-    if (fs.existsSync(outputPath)) {
-      const stats = fs.statSync(outputPath);
-      if (stats.size > 50000) {
-        console.log("✅ Using cached video:", outputPath);
-        return resolve(outputPath);
-      } else {
-        try {
-          fs.unlinkSync(outputPath);
-        } catch (e) {
-          console.warn("Could not remove invalid cached file:", e.message);
-        }
-      }
-    }
-
-    let downloadTimeout = setTimeout(
-      () => {
-        console.log("⏰ Download timeout reached");
-        reject(new Error("Download timeout - video may be too large"));
-      },
-      2 * 60 * 1000,
-    );
-
-    try {
-      const stream = ytdl(url, {
-        quality: "highest",
-        filter: "audioandvideo",
-        requestOptions: {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          },
-        },
-      });
-
-      const writeStream = fs.createWriteStream(outputPath);
-      stream.pipe(writeStream);
-
-      stream.on("error", (error) => {
-        clearTimeout(downloadTimeout);
-        console.error("❌ Download stream error:", error.message);
-
-        if (fs.existsSync(outputPath)) {
-          try {
-            fs.unlinkSync(outputPath);
-          } catch (e) {}
-        }
-
-        if (error.message.includes("Video unavailable")) {
-          reject(new Error("Video is unavailable, private, or deleted"));
-        } else if (error.message.includes("Sign in")) {
-          reject(new Error("Age-restricted video - cannot download"));
-        } else {
-          reject(new Error("Failed to download video: " + error.message));
-        }
-      });
-
-      writeStream.on("finish", () => {
-        clearTimeout(downloadTimeout);
-        console.log("✅ Download completed:", outputPath);
-
-        try {
-          const stats = fs.statSync(outputPath);
-          if (stats.size < 50000) {
-            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-            reject(new Error("Downloaded file is too small"));
-          } else {
-            console.log(
-              `📁 File size: ${Math.round(stats.size / 1024 / 1024)}MB`,
-            );
-            resolve(outputPath);
-          }
-        } catch (statError) {
-          reject(new Error("Failed to verify downloaded file"));
-        }
-      });
-
-      writeStream.on("error", (error) => {
-        clearTimeout(downloadTimeout);
-        console.error("❌ Write stream error:", error.message);
-        if (fs.existsSync(outputPath)) {
-          try {
-            fs.unlinkSync(outputPath);
-          } catch (e) {}
-        }
-        reject(new Error("Failed to save video file"));
-      });
-    } catch (error) {
-      clearTimeout(downloadTimeout);
-      console.error("❌ Download setup error:", error);
-      reject(new Error("Failed to initialize video download"));
-    }
-  });
-}
-
-// Create viral clip
-async function createViralClip(inputPath, videoId) {
-  return new Promise((resolve, reject) => {
-    const outputPath = path.join(
-      processedDir,
-      `viral_${videoId}_${Date.now()}.mp4`,
-    );
-
-    console.log("🎬 Creating viral clip for:", videoId);
-
-    ffmpeg.ffprobe(inputPath, (err, metadata) => {
-      if (err) {
-        console.error("❌ FFprobe error:", err);
-        return reject(new Error("Failed to analyze video"));
-      }
-
-      const duration = metadata.format.duration;
-      const videoStream = metadata.streams.find(
-        (s) => s.codec_type === "video",
-      );
-
-      if (!videoStream) {
-        return reject(new Error("No video stream found"));
-      }
-
-      const clipDuration = Math.min(30, Math.max(10, duration * 0.8));
-      const startTime = Math.max(0, (duration - clipDuration) / 3);
-
-      console.log(
-        `🎯 Processing clip: ${clipDuration}s from ${Math.round(startTime)}s`,
-      );
-
-      const command = ffmpeg(inputPath)
-        .setStartTime(startTime)
-        .setDuration(clipDuration)
-        .videoCodec("libx264")
-        .audioCodec("aac")
-        .outputOptions([
-          "-preset",
-          "fast",
-          "-crf",
-          "23",
-          "-maxrate",
-          "8M",
-          "-bufsize",
-          "16M",
-          "-movflags",
-          "+faststart",
-          "-ac",
-          "2",
-          "-ar",
-          "48000",
-          "-b:a",
-          "128k",
-          "-vf",
-          "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=yuv420p",
-          "-aspect",
-          "9:16",
-        ])
-        .output(outputPath);
-
-      command
-        .on("start", (commandLine) => {
-          console.log("🔧 FFmpeg command started");
-        })
-        .on("progress", (progress) => {
-          const percent = Math.round(progress.percent || 0);
-          if (percent % 20 === 0) {
-            console.log(`⚡ Processing: ${percent}%`);
-          }
-        })
-        .on("end", () => {
-          console.log("✅ Viral clip created:", outputPath);
-
-          if (fs.existsSync(outputPath)) {
-            const stats = fs.statSync(outputPath);
-            if (stats.size > 50000) {
-              console.log(
-                `📁 Output size: ${Math.round(stats.size / 1024 / 1024)}MB`,
-              );
-              resolve(outputPath);
-            } else {
-              if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-              reject(new Error("Generated clip file is too small"));
-            }
-          } else {
-            reject(new Error("Output file was not created"));
-          }
-        })
-        .on("error", (error) => {
-          console.error("❌ FFmpeg error:", error);
-          if (fs.existsSync(outputPath)) {
-            try {
-              fs.unlinkSync(outputPath);
-            } catch (e) {}
-          }
-          reject(new Error("Failed to process video"));
-        })
-        .run();
-    });
-  });
-}
-
-// AWS S3 configuration
-const s3 = new S3Client({
-  region: process.env.AWS_REGION,
-  credentials: process.env.AWS_ACCESS_KEY_ID
-    ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      }
-    : undefined,
-});
-const S3_BUCKET = process.env.AWS_S3_BUCKET;
-
-async function uploadToS3(filePath, key) {
-  const fileStream = fs.createReadStream(filePath);
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: key,
-      Body: fileStream,
-      ContentType: "video/mp4",
-      ACL: "public-read",
-    }),
-  );
-  return `https://${S3_BUCKET}.s3.amazonaws.com/${key}`;
-}
-
-// Redis-based advanced caching utility functions
-const redisCache = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
-
-async function cacheSet(key, value, ttl = 3600) {
-  await redisCache.set(key, JSON.stringify(value), "EX", ttl);
-}
-async function cacheGet(key) {
-  const val = await redisCache.get(key);
-  return val ? JSON.parse(val) : null;
-}
-
 // API Routes
 
 // Enhanced validation endpoint
@@ -776,7 +522,7 @@ app.get("/api/job/:jobId", async (req, res) => {
       result: job.returnvalue || null,
       failedReason: job.failedReason || null,
     });
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "Failed to get job status" });
   }
 });
@@ -859,7 +605,7 @@ app.get("/health", (req, res) => {
 });
 
 // Centralized error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
   console.error("Server error:", err);
   res.status(500).json({ error: "Internal server error" });
 });

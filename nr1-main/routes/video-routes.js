@@ -3,9 +3,6 @@ const path = require("path");
 const fs = require("fs");
 const router = express.Router();
 const videoQueue = require("../queue/videoQueue");
-const { Job } = require("bullmq");
-const IORedis = require("ioredis");
-const redis = new IORedis(process.env.REDIS_URL || "redis://localhost:6379");
 
 /**
  * Route for getting video information
@@ -88,7 +85,7 @@ router.get("/videos/job/:jobId", async (req, res) => {
       result: job.returnvalue || null,
       failedReason: job.failedReason || null,
     });
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "Failed to get job status" });
   }
 });
