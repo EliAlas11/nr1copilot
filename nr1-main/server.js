@@ -91,26 +91,22 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
-// --- Bootstrap and Diagnostics ---
-const { bootstrapDiagnostics, gracefulShutdown } = require('./utils/bootstrap');
+// --- Runtime Banner, Diagnostics, and Deprecation ---
+const { runtimeBanner, printDeprecationWarning } = require('./utils/runtime');
 
 (async () => {
-  await bootstrapDiagnostics({
+  await runtimeBanner({
     port,
     env: process.env.NODE_ENV,
     mongoUri,
     redisUrl: process.env.REDIS_URL,
     s3Bucket: process.env.AWS_S3_BUCKET,
     jwtSet: !!process.env.JWT_SECRET,
+    version: require('../package.json').version,
+    date: new Date().toISOString(),
   });
   server.listen(port, () => {
     logWithLevel('info', `🚀 Server running on http://localhost:${port}`);
   });
+  printDeprecationWarning(logWithLevel);
 })();
-
-gracefulShutdown(server, mongoose, logWithLevel);
-
-// Print deprecation warning at the end
-setTimeout(() => {
-  logWithLevel('warn', 'server.js is deprecated. Please use app.js as the main entry point for the new professional backend.');
-}, 1000);
