@@ -534,6 +534,10 @@ app.get("/api/info/:videoId", async (req, res) => {
 // Main processing endpoint (now queues job)
 app.post("/api/process", async (req, res) => {
   try {
+    if (!videoQueue) {
+      logger.error('Queue unavailable: Redis is not connected.');
+      return res.status(503).json({ success: false, error: 'Queue unavailable: Redis is not connected.' });
+    }
     const schema = Joi.object({
       videoId: Joi.string().length(11).optional(),
       url: Joi.string().uri().optional(),
@@ -569,6 +573,10 @@ app.post("/api/process", async (req, res) => {
 // Job status endpoint
 app.get("/api/job/:jobId", async (req, res) => {
   try {
+    if (!videoQueue) {
+      logger.error('Queue unavailable: Redis is not connected.');
+      return res.status(503).json({ error: 'Queue unavailable: Redis is not connected.' });
+    }
     const job = await videoQueue.getJob(req.params.jobId);
     if (!job) return res.status(404).json({ error: "Job not found" });
     const state = await job.getState();
@@ -702,7 +710,27 @@ const MAX_DURATION_SEC = 1800; // 30 minutes
 const MIN_DURATION_SEC = 10;   // 10 seconds
 
 // 2. Import videoQueue if not already
-const videoQueue = require('./queue/videoQueue');
+let videoQueue;
+let redisConnectionHealthy = false;
+try {
+  const IORedis = require('ioredis');
+  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+  const redis = new IORedis(redisUrl);
+  await redis.ping();
+  redis.disconnect();
+  videoQueue = require('./queue/videoQueue');
+  redisConnectionHealthy = true;
+  logger.info('✅ Redis connection established.');
+} catch (err) {
+  logger.error('❌ Failed to connect to Redis:', err.message);
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('Redis is required in production. Exiting.');
+    process.exit(1);
+  } else {
+    logger.warn('Redis unavailable. Queue features will be disabled.');
+    videoQueue = null;
+  }
+}
 
 // 3. Enforce required environment variables at startup
 const requiredEnvVars = [
@@ -759,11 +787,11 @@ async function checkDependenciesAsync() {
   const checks = {};
   // Redis
   try {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-    const redis = new IORedis(redisUrl);
-    await redis.ping();
-    checks.redis = 'ok';
-    redis.disconnect();
+    if (redisConnectionHealthy) {
+      checks.redis = 'ok';
+    } else {
+      checks.redis = 'error';
+    }
   } catch (e) { checks.redis = 'error'; }
   // S3
   try {
@@ -808,7 +836,7 @@ app.use((err, req, res, next) => {
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
-  console.log("🛑 SIGTERM received, shutting down gracefully");
+  logger.info("🛑 SIGTERM received, shutting down gracefully");
   cleanupOldFiles();
   process.exit(0);
 });
