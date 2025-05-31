@@ -359,14 +359,14 @@ try {
   ensureVideoDirs();
   logWithLevel('info', `✅ Video directories exist and are writable at ${VIDEO_STORAGE_PATH}`);
 } catch (err) {
-  logWithLevel('error', err.message);
+  logWithLevel('error', err.stack || err.message);
   process.exit(1);
 }
 
 // --- FFmpeg Path Validation ---
-const { execSync } = require('child_process');
 function validateFFmpeg() {
   try {
+    const { execSync } = require('child_process');
     execSync('ffmpeg -version', { stdio: 'ignore' });
     logWithLevel('info', '✅ FFmpeg is available in the container.');
   } catch (err) {
@@ -418,3 +418,21 @@ try {
     process.exit(1);
   }
 })();
+
+// --- Check if VIDEO_STORAGE_PATH is on a persistent disk ---
+function checkPersistentDisk() {
+  if (!VIDEO_STORAGE_PATH.startsWith('/opt/render/project/src/')) {
+    logWithLevel('warn', `⚠️ VIDEO_STORAGE_PATH (${VIDEO_STORAGE_PATH}) does not appear to be on a Render.com persistent disk. Files may not persist across deploys.`);
+  }
+}
+checkPersistentDisk();
+
+// --- Audit: Add a warning if running as root (not recommended for cloud). Log a warning if process.getuid() === 0. This is a Render.com best practice.
+if (typeof process.getuid === 'function' && process.getuid() === 0) {
+  logWithLevel('warn', '⚠️ The server is running as root. This is not recommended for production or cloud environments.');
+}
+
+// Audit: Add a warning if NODE_ENV is not 'production'. This is a common Render.com misconfiguration.
+if (process.env.NODE_ENV !== 'production') {
+  logWithLevel('warn', '⚠️ NODE_ENV is not set to production. This is not recommended for cloud deployment.');
+}
