@@ -33,3 +33,5 @@
   ],
   "screenshots": [{ "src": "/public/screenshot1.png", "sizes": "600x800", "type": "image/png" }]
 }
+
+// All backend logic, video processing, and API endpoints are implemented in Python using FastAPI. This manifest is for the frontend PWA only.
