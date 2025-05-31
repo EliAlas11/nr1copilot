@@ -11,6 +11,7 @@ const videoQueue = require("./queue/videoQueue");
 const http = require("http");
 const { Server } = require("socket.io");
 const { QueueEvents } = require("bullmq");
+const IORedis = require("ioredis");
 
 // Set FFmpeg path with error handling
 try {
@@ -628,9 +629,7 @@ const io = new Server(server, {
 
 // BullMQ job events
 const videoQueueEvents = new QueueEvents("video-processing", {
-  connection: require("ioredis")(
-    process.env.REDIS_URL || "redis://localhost:6379",
-  ),
+  connection: new IORedis(process.env.REDIS_URL || "redis://localhost:6379"),
 });
 
 videoQueueEvents.on("progress", ({ jobId, data }) => {
