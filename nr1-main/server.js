@@ -138,15 +138,33 @@ videoQueueEvents.on('progress', ({ jobId, data }) => { io.emit(`job-progress-${j
 videoQueueEvents.on('completed', ({ jobId, returnvalue }) => { io.emit(`job-completed-${jobId}`, returnvalue); });
 videoQueueEvents.on('failed', ({ jobId, failedReason }) => { io.emit(`job-failed-${jobId}`, failedReason); });
 
-// --- Graceful Shutdown with In-Flight Request Draining ---
+// --- Request Metrics ---
+let totalRequests = 0;
+let serverStartTime = Date.now();
+
+// Count all incoming requests for metrics
+app.use((req, res, next) => {
+  totalRequests++;
+  next();
+});
+
+// --- Graceful Shutdown with Metrics and Banner ---
 function setupGracefulShutdown(server) {
   let connections = new Set();
+  let shuttingDown = false;
   server.on('connection', (conn) => {
     connections.add(conn);
     conn.on('close', () => connections.delete(conn));
   });
-  const shutdown = async () => {
-    logWithLevel('info', 'Received shutdown signal, closing server...');
+  const shutdown = (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    const uptime = ((Date.now() - serverStartTime) / 1000).toFixed(1);
+    logWithLevel('info', '==============================');
+    logWithLevel('info', `   ⏻ Shutdown (${signal}) requested   `);
+    logWithLevel('info', '==============================');
+    logWithLevel('info', `Uptime: ${uptime}s | Total Requests: ${totalRequests}`);
+    logWithLevel('info', `Active Connections: ${connections.size}`);
     server.close((err) => {
       if (err) {
         logWithLevel('error', 'Error closing HTTP server during shutdown:', err);
@@ -156,19 +174,23 @@ function setupGracefulShutdown(server) {
       setTimeout(() => {
         logWithLevel('info', `Force closing ${connections.size} open connections`);
         for (const conn of connections) conn.destroy();
+        logWithLevel('info', '==============================');
+        logWithLevel('info', '   💡 NR1 Copilot stopped.         ');
+        logWithLevel('info', '==============================');
         process.exit(0);
       }, 5000);
     });
   };
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
-  process.on('uncaughtException', (err) => {
-    logWithLevel('error', 'Uncaught Exception:', err);
-    process.exit(1);
+  ['SIGTERM', 'SIGINT'].forEach((signal) => {
+    process.once(signal, () => shutdown(signal));
   });
-  process.on('unhandledRejection', (reason) => {
+  process.once('uncaughtException', (err) => {
+    logWithLevel('error', 'Uncaught Exception:', err);
+    shutdown('uncaughtException');
+  });
+  process.once('unhandledRejection', (reason) => {
     logWithLevel('error', 'Unhandled Rejection:', reason);
-    process.exit(1);
+    shutdown('unhandledRejection');
   });
 }
 setupGracefulShutdown(server);
