@@ -1,6 +1,6 @@
 # JavaScript Functionality and Site Workflow Analysis (Obsolete)
 
-This document is obsolete. The backend and all business logic have been fully migrated to Python using FastAPI. All video processing, job handling, and integrations are now implemented in Python, and the system is English-only and production-ready.
+This document is obsolete. All backend logic is now implemented in Python using FastAPI. For the current backend workflow, see the updated section below.
 
 ---
 

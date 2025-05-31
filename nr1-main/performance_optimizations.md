@@ -1,4 +1,4 @@
-# This file is obsolete after migration to Python/FastAPI. Frontend performance optimizations for JavaScript/CSS are no longer relevant.
+# This document is obsolete. All backend logic and performance optimizations are now implemented in Python using FastAPI. Frontend JavaScript/CSS optimizations are no longer relevant. For backend performance, see the FastAPI app and Python service modules.
 
 # Performance Optimizations and Resource Usage Reduction
 

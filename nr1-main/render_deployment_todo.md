@@ -8,4 +8,4 @@
 - [ ] Prepare the final deployment package
 - [ ] Write a clear deployment guide for users
 
-# This file is obsolete after migration to Python/FastAPI. The deployment todo references Node.js/JavaScript and is no longer relevant.
+# This document is obsolete. The backend is now implemented in Python using FastAPI. For deployment, use the Dockerfile and render.yaml provided for Python, not Node.js. All instructions should reference Python/FastAPI only.
