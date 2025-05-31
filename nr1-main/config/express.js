@@ -38,16 +38,18 @@ function setupExpress(app) {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use(express.static(path.join(__dirname, '..', staticDir)));
-  if (process.env.NODE_ENV === 'production') {
-    app.use(
-      morgan('combined', {
-        stream: require('fs').createWriteStream(path.join(__dirname, '..', 'server.log'), {
-          flags: 'a',
-        }),
-      }),
-    );
+  // Logging: stdout/stderr only unless LOG_TO_FILE and LOG_FILE_PATH are set
+  let logStream = null;
+  if (process.env.LOG_TO_FILE === 'true' && process.env.LOG_FILE_PATH) {
+    try {
+      logStream = require('fs').createWriteStream(process.env.LOG_FILE_PATH, { flags: 'a' });
+      app.use(morgan('combined', { stream: logStream }));
+    } catch (err) {
+      logger.error('❌ Failed to create log file stream:', err);
+      app.use(morgan('combined'));
+    }
   } else {
-    app.use(morgan('dev'));
+    app.use(morgan('combined'));
   }
 }
 

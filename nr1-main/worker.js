@@ -29,9 +29,10 @@ try {
   // TODO: Add fallback or degrade gracefully
 }
 
-const videosDir = path.join(__dirname, 'videos');
-const processedDir = path.join(videosDir, 'processed');
-const tempDir = path.join(videosDir, 'temp');
+const VIDEO_STORAGE_PATH = process.env.VIDEO_STORAGE_PATH || '/opt/render/project/src/nr1-main/videos';
+const videosDir = VIDEO_STORAGE_PATH;
+const processedDir = path.join(VIDEO_STORAGE_PATH, 'processed');
+const tempDir = path.join(VIDEO_STORAGE_PATH, 'temp');
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION,

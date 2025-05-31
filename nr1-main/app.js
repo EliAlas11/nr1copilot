@@ -4,7 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const { port, env, redisUrl, requiredEnv } = require('./config/config');
+const { port, env, redisUrl, requiredEnv, videoStoragePath, logFilePath } = require('./config/config');
 const logger = require('./config/logger');
 const setupExpress = require('./config/express');
 const { checkDependencies } = require('./utils/health');

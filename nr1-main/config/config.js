@@ -19,9 +19,10 @@ module.exports = {
     max: ENV === 'production' ? 30 : 300,
   },
   staticDir: 'public',
-  logFile: 'server.log',
+  logFilePath: process.env.LOG_FILE_PATH || 'server.log',
   maxVideoDuration: 1800, // 30 min
   minVideoDuration: 10, // 10 sec
+  videoStoragePath: process.env.VIDEO_STORAGE_PATH || '/opt/render/project/src/nr1-main/videos',
   requiredEnv: [
     // Add required env vars for production
     // 'REDIS_URL', 'AWS_S3_BUCKET', ...

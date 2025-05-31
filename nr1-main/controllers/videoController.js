@@ -11,9 +11,11 @@ const asyncHandler = require('../utils/asyncHandler');
 const videoService = require('../services/videoService');
 const videoValidator = require('../validators/videoValidator');
 
+const VIDEO_STORAGE_PATH = process.env.VIDEO_STORAGE_PATH || '/opt/render/project/src/nr1-main/videos';
 const MAX_DURATION_SEC = 1800;
 const MIN_DURATION_SEC = 10;
-const processedDir = path.join(__dirname, '../videos/processed');
+const processedDir = path.join(VIDEO_STORAGE_PATH, 'processed');
+const tempDir = path.join(VIDEO_STORAGE_PATH, 'temp');
 
 // Validate YouTube URL and accessibility
 exports.validate = asyncHandler(async (req, res) => {

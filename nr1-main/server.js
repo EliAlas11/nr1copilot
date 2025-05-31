@@ -8,8 +8,8 @@
 'use strict';
 require('dotenv').config();
 const express = require('express');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
 const { Server } = require('socket.io');
 const IORedis = require('ioredis');
@@ -59,8 +59,25 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(require('cors')(require('./config/express').corsConfig));
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use(express.static(path.join(__dirname, 'public')));
-const logStream = process.env.NODE_ENV === 'production' ? fs.createWriteStream(path.join(__dirname, 'server.log'), { flags: 'a' }) : null;
-if (logStream) app.use(morgan('combined', { stream: logStream }));
+
+// --- Logging Stream: Use stdout/stderr by default, file logging only if LOG_TO_FILE=true and path is on persistent disk ---
+let logStream = null;
+if (process.env.LOG_TO_FILE === 'true' && process.env.LOG_FILE_PATH) {
+  try {
+    const logPath = process.env.LOG_FILE_PATH;
+    logStream = fs.createWriteStream(logPath, { flags: 'a' });
+    logWithLevel('info', `✅ File logging enabled at ${logPath}`);
+  } catch (err) {
+    logWithLevel('error', '❌ Failed to create log file stream:', err);
+    logStream = null;
+  }
+}
+if (logStream) {
+  app.use(morgan('combined', { stream: logStream }));
+} else {
+  app.use(morgan('combined'));
+  logWithLevel('info', 'ℹ️ Logging to stdout/stderr (Render.com best practice)');
+}
 
 // --- Request ID Middleware for Traceability ---
 app.use((req, res, next) => {
@@ -227,6 +244,26 @@ if (missingVars.length) {
   logWithTimestamp('warn', warn(`⚠️  Missing required environment variables: ${missingVars.join(', ')}`));
 }
 
+// --- Robust Environment Variable Validation ---
+function validateEnvVars(requiredVars) {
+  const missing = requiredVars.filter((v) => !process.env[v]);
+  if (missing.length) {
+    logWithLevel('error', `❌ Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+}
+validateEnvVars([
+  'MONGODB_URI',
+  'REDIS_URL',
+  'JWT_SECRET',
+  // S3 required for production video storage
+  ...(process.env.NODE_ENV === 'production' ? ['AWS_S3_BUCKET', 'AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'] : []),
+  // VIDEO_STORAGE_PATH is optional, but warn if not set in production
+]);
+if (process.env.NODE_ENV === 'production' && !process.env.VIDEO_STORAGE_PATH) {
+  logWithLevel('warn', '⚠️ VIDEO_STORAGE_PATH not set. Using default Render.com disk mount.');
+}
+
 function printConfigSummary() {
   const summary = [
     { Key: 'Node.js', Value: process.version },
@@ -238,6 +275,8 @@ function printConfigSummary() {
     { Key: 'S3 Bucket', Value: process.env.AWS_S3_BUCKET ? '[set]' : '[not set]' },
     { Key: 'JWT Secret', Value: process.env.JWT_SECRET ? '[set]' : '[not set]' },
   ];
+  const sep = color('-----------------------------');
+  logWithTimestamp('info', sep);
   logWithTimestamp('info', color('--- Configuration Summary ---'));
   if (typeof console.table === 'function') {
     // Print as a table for beautiful output
@@ -248,8 +287,50 @@ function printConfigSummary() {
       logWithTimestamp('info', color(`${Key.padEnd(14)}: ${Value}`));
     }
   }
-  logWithTimestamp('info', color('-----------------------------'));
+  logWithTimestamp('info', sep);
 }
+
+// --- Centralized Video Storage Path ---
+const VIDEO_STORAGE_PATH = process.env.VIDEO_STORAGE_PATH || '/opt/render/project/src/nr1-main/videos';
+
+// --- Ensure video directories exist and are writable ---
+function ensureVideoDirs() {
+  const videoDirs = [
+    VIDEO_STORAGE_PATH,
+    path.join(VIDEO_STORAGE_PATH, 'temp'),
+    path.join(VIDEO_STORAGE_PATH, 'processed'),
+  ];
+  for (const dir of videoDirs) {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    try {
+      fs.accessSync(dir, fs.constants.W_OK);
+    } catch (err) {
+      throw new Error(`❌ Directory not writable: ${dir}`);
+    }
+  }
+}
+try {
+  ensureVideoDirs();
+  logWithLevel('info', `✅ Video directories exist and are writable at ${VIDEO_STORAGE_PATH}`);
+} catch (err) {
+  logWithLevel('error', err.message);
+  process.exit(1);
+}
+
+// --- FFmpeg Path Validation ---
+const { execSync } = require('child_process');
+function validateFFmpeg() {
+  try {
+    execSync('ffmpeg -version', { stdio: 'ignore' });
+    logWithLevel('info', '✅ FFmpeg is available in the container.');
+  } catch (err) {
+    logWithLevel('error', '❌ FFmpeg is not available in the container. Please ensure it is installed.');
+    process.exit(1);
+  }
+}
+validateFFmpeg();
 
 // --- Advanced Startup Diagnostics and Banner ---
 (async () => {

@@ -11,8 +11,9 @@ const { Worker: NodeWorker } = require('worker_threads');
 
 const MAX_DURATION_SEC = 1800;
 const MIN_DURATION_SEC = 10;
-const processedDir = path.join(__dirname, '../videos/processed');
-const tempDir = path.join(__dirname, '../videos/temp');
+const VIDEO_STORAGE_PATH = process.env.VIDEO_STORAGE_PATH || '/opt/render/project/src/nr1-main/videos';
+const processedDir = path.join(VIDEO_STORAGE_PATH, 'processed');
+const tempDir = path.join(VIDEO_STORAGE_PATH, 'temp');
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
   credentials: process.env.AWS_ACCESS_KEY_ID
