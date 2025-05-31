@@ -1,3 +1,9 @@
+// --- REQUIRED ENVIRONMENT VARIABLES FOR RENDER.COM DEPLOYMENT ---
+// MONGODB_URI, REDIS_URL, JWT_SECRET
+// (production: AWS_S3_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, VIDEO_STORAGE_PATH, LOG_FILE_PATH)
+// Ensure all are set in the Render.com dashboard or .env file
+// ----------------------------------------------------------------
+
 // --- NR1 Copilot Professional Backend ---
 // This file is auto-cleaned and maintained for best practices.
 // Use app.js as the main entry point for new features and routes.
@@ -35,11 +41,20 @@ const authRoutes = require('./routes/auth-routes');
 
 // Set FFmpeg path with error handling
 try {
-  const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+  const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+  const ffmpegPath = ffmpegInstaller.path;
   ffmpeg.setFfmpegPath(ffmpegPath);
-  logWithLevel('info', '✅ FFmpeg configured successfully');
-} catch {
+  logWithLevel('info', `✅ FFmpeg configured successfully. Path: ${ffmpegPath}`);
+} catch (err) {
   logWithLevel('warn', '⚠️ FFmpeg installer not found, using system FFmpeg');
+  try {
+    const { execSync } = require('child_process');
+    const sysPath = execSync('which ffmpeg').toString().trim();
+    logWithLevel('info', `ℹ️ System FFmpeg path: ${sysPath}`);
+  } catch (e) {
+    logWithLevel('error', '❌ FFmpeg not found in system PATH. Video processing will fail.');
+    process.exit(1);
+  }
 }
 
 const app = express();
@@ -125,16 +140,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// --- Security Headers for Static Files ---
-app.use((req, res, next) => {
-  if (req.url.startsWith('/public/') || req.url.startsWith('/static/')) {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  }
-  next();
-});
-
 // --- Attach modular routes ---
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/videos', videoRoutes);
@@ -212,6 +217,27 @@ function setupGracefulShutdown(server) {
         logWithTimestamp('error', 'Error closing HTTP server during shutdown:', err);
       } else {
         logWithTimestamp('info', 'HTTP server closed');
+      }
+      // Close Redis
+      if (redisConnection) {
+        redisConnection.quit().then(() => {
+          logWithTimestamp('info', 'Redis connection closed');
+        }).catch((e) => {
+          logWithTimestamp('error', 'Error closing Redis connection:', e);
+        });
+      }
+      // Close MongoDB
+      try {
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 0) {
+          mongoose.connection.close().then(() => {
+            logWithTimestamp('info', 'MongoDB connection closed');
+          }).catch((e) => {
+            logWithTimestamp('error', 'Error closing MongoDB connection:', e);
+          });
+        }
+      } catch (e) {
+        logWithTimestamp('warn', 'MongoDB not available for shutdown:', e.message);
       }
       setTimeout(() => {
         logWithTimestamp('info', `Force closing ${connections.size} open connections`);
@@ -349,6 +375,21 @@ function validateFFmpeg() {
   }
 }
 validateFFmpeg();
+
+// --- Robust Redis Connection Handling ---
+let redisConnection;
+try {
+  redisConnection = new IORedis(process.env.REDIS_URL);
+  redisConnection.on('error', (err) => {
+    logWithLevel('error', `❌ Redis connection error: ${err.message}`);
+  });
+  redisConnection.on('connect', () => {
+    logWithLevel('info', '✅ Redis connected');
+  });
+} catch (err) {
+  logWithLevel('error', `❌ Failed to connect to Redis: ${err.message}`);
+  process.exit(1);
+}
 
 // --- Advanced Startup Diagnostics and Banner ---
 (async () => {
