@@ -1,87 +1,87 @@
-# دليل نشر موقع Viral Clip Generator على منصة Render.com
+# Deployment Guide for Viral Clip Generator on Render.com
 
-## مقدمة
+## Introduction
 
-هذا الدليل يشرح كيفية نشر موقع Viral Clip Generator على منصة Render.com بخطوات بسيطة ومباشرة.
+This guide explains how to deploy the Viral Clip Generator website on Render.com in simple, clear steps.
 
-## متطلبات النشر
+## Deployment Requirements
 
-1. حساب على منصة Render.com
-2. حساب GitHub (اختياري، لكنه مفضل للنشر التلقائي)
+1. A Render.com account
+2. A GitHub account (optional, but recommended for automatic deployment)
 
-## خطوات النشر
+## Deployment Steps
 
-### 1. تحميل الكود إلى GitHub (اختياري ولكن موصى به)
+### 1. Upload the Code to GitHub (Optional but Recommended)
 
-1. قم بإنشاء مستودع جديد على GitHub
-2. قم برفع جميع ملفات المشروع إلى المستودع
-3. تأكد من رفع ملفات `package.json` و `render.yaml` و `server.js`
+1. Create a new repository on GitHub
+2. Upload all project files to the repository
+3. Make sure to include `package.json`, `render.yaml`, and `server.js`
 
-### 2. إنشاء خدمة جديدة على Render.com
+### 2. Create a New Service on Render.com
 
-1. قم بتسجيل الدخول إلى حسابك على Render.com
-2. انقر على زر "New" واختر "Web Service"
-3. اختر "Build and deploy from a Git repository" إذا كنت استخدمت GitHub
-4. أو اختر "Upload Files" إذا كنت تريد رفع الملفات مباشرة
+1. Log in to your Render.com account
+2. Click the "New" button and select "Web Service"
+3. Choose "Build and deploy from a Git repository" if you used GitHub
+4. Or select "Upload Files" if you want to upload files directly
 
-### 3. تكوين الخدمة
+### 3. Configure the Service
 
-إذا كنت تستخدم GitHub:
-1. اختر المستودع الذي رفعت إليه الكود
-2. سيتم اكتشاف ملف `render.yaml` تلقائياً وتكوين الخدمة
+If using GitHub:
+1. Select the repository you uploaded the code to
+2. The `render.yaml` file will be detected automatically and used for configuration
 
-إذا كنت ترفع الملفات مباشرة:
-1. قم بتعيين الإعدادات التالية:
+If uploading files directly:
+1. Set the following options:
    - **Name**: viral-clip-generator
    - **Environment**: Node
    - **Build Command**: npm install
    - **Start Command**: node server.js
    - **Health Check Path**: /health
 
-### 4. إعداد المتغيرات البيئية
+### 4. Set Environment Variables
 
-قم بإضافة المتغيرات البيئية التالية:
+Add the following environment variables:
 - **NODE_ENV**: production
 
-### 5. إعداد التخزين المستمر
+### 5. Set Up Persistent Storage
 
-1. انتقل إلى قسم "Disks" في إعدادات الخدمة
-2. قم بإضافة قرص جديد:
+1. Go to the "Disks" section in your service settings
+2. Add a new disk:
    - **Name**: viral-clips-data
    - **Mount Path**: /opt/render/project/src/videos
-   - **Size**: 1 GB (يمكن زيادته حسب الحاجة)
+   - **Size**: 1 GB (increase as needed)
 
-### 6. بدء النشر
+### 6. Start Deployment
 
-1. انقر على زر "Create Web Service"
-2. انتظر حتى اكتمال عملية البناء والنشر
-3. ستحصل على رابط للموقع المنشور (مثال: https://viral-clip-generator.onrender.com)
+1. Click the "Create Web Service" button
+2. Wait for the build and deployment to finish
+3. You will get a link to your deployed site (e.g., https://viral-clip-generator.onrender.com)
 
-## اختبار الموقع بعد النشر
+## Testing the Site After Deployment
 
-1. افتح الرابط الذي حصلت عليه من Render
-2. تأكد من أن الصفحة الرئيسية تظهر بشكل صحيح
-3. جرب إدخال رابط فيديو YouTube والنقر على زر "Make Viral!"
-4. تأكد من أن معاينة الفيديو وتنزيله يعملان بشكل صحيح
+1. Open the link provided by Render
+2. Make sure the homepage loads correctly
+3. Try entering a YouTube video URL and click "Make Viral!"
+4. Check that video preview and download work as expected
 
-## استكشاف الأخطاء وإصلاحها
+## Troubleshooting
 
-إذا واجهت أي مشاكل:
-1. تحقق من سجلات الخدمة في لوحة تحكم Render
-2. تأكد من أن جميع المتغيرات البيئية مضبوطة بشكل صحيح
-3. تأكد من أن قرص التخزين المستمر تم تكوينه بشكل صحيح
+If you encounter any issues:
+1. Check the service logs in the Render dashboard
+2. Make sure all environment variables are set correctly
+3. Ensure the persistent disk is configured properly
 
-## تحديث الموقع
+## Updating the Site
 
-لتحديث الموقع بعد النشر:
-1. إذا كنت تستخدم GitHub، ما عليك سوى دفع التغييرات إلى المستودع وسيتم النشر تلقائياً
-2. إذا كنت ترفع الملفات مباشرة، قم بتحديث الملفات من خلال لوحة تحكم Render
+To update the site after deployment:
+1. If using GitHub, just push changes to the repository and Render will redeploy automatically
+2. If uploading files directly, update the files through the Render dashboard
 
-## ملاحظات إضافية
+## Additional Notes
 
-- يمكنك ضبط إعدادات النطاق الترددي والذاكرة من لوحة تحكم Render حسب احتياجاتك
-- للحصول على أداء أفضل، يمكنك الترقية إلى خطة مدفوعة على Render
-- تأكد من مراقبة استخدام الموارد لتجنب أي رسوم إضافية
+- You can adjust bandwidth and memory settings from the Render dashboard as needed
+- For better performance, consider upgrading to a paid plan on Render
+- Monitor resource usage to avoid extra charges
 
 # Deployment Guide for nr1copilot
 
