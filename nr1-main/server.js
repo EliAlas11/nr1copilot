@@ -120,32 +120,6 @@ videoQueueEvents.on('progress', ({ jobId, data }) => { io.emit(`job-progress-${j
 videoQueueEvents.on('completed', ({ jobId, returnvalue }) => { io.emit(`job-completed-${jobId}`, returnvalue); });
 videoQueueEvents.on('failed', ({ jobId, failedReason }) => { io.emit(`job-failed-${jobId}`, failedReason); });
 
-// --- Advanced rate limiting and audit logging for sensitive endpoints ---
-const advancedLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: (req, res) => (req.user ? 100 : 30),
-  message: { error: 'Too many requests. Please slow down.' },
-  keyGenerator: (req) => (req.user && req.user.id ? `user:${req.user.id}` : `ip:${req.ip}`),
-  skip: (req) => req.path === '/health' || req.method === 'OPTIONS',
-  handler: (req, res) => {
-    logWithLevel('warn', 'Rate limit exceeded:', req.ip, req.originalUrl, req.user ? `user:${req.user.id}` : 'guest');
-    res.status(429).json({ error: 'Too many requests. Please slow down.' });
-  },
-});
-app.use(['/api/v1/videos/process', '/api/v1/feedback', '/api/v1/analytics', '/api/v1/user/login', '/api/v1/user/signup'], advancedLimiter);
-function auditLog(action) {
-  return (req, res, next) => {
-    const user = req.user ? req.user.email : 'guest';
-    logWithLevel('info', `[AUDIT]`, action, 'by', user, 'from', req.ip, 'at', new Date().toISOString());
-    next();
-  };
-}
-app.use('/api/v1/user/login', auditLog('login'));
-app.use('/api/v1/user/signup', auditLog('signup'));
-app.use('/api/v1/feedback', auditLog('feedback'));
-app.use('/api/v1/analytics', auditLog('analytics'));
-app.use('/api/v1/videos/process', auditLog('video_process'));
-
 // --- MongoDB connection ---
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/nr1main';
 mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -159,10 +133,30 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
+// --- Startup diagnostics ---
+(async () => {
+  logWithLevel('info', 'Starting NR1 Copilot backend diagnostics...');
+  try {
+    const health = await checkDependencies();
+    logWithLevel('info', 'Dependency health:', JSON.stringify(health));
+  } catch (e) {
+    logWithLevel('warn', 'Dependency health check failed:', e.message);
+  }
+})();
+
 // --- Centralized error handler ---
 app.use((err, req, res, next) => {
-  logWithLevel('error', 'Server error:', err);
+  logWithLevel('error', 'Server error:', err.stack || err);
   res.status(500).json({ error: 'Internal server error' });
+});
+
+// --- Graceful shutdown ---
+process.on('SIGTERM', () => {
+  logWithLevel('info', 'SIGTERM received, shutting down gracefully');
+  mongoose.connection.close(() => {
+    logWithLevel('info', 'MongoDB connection closed');
+    process.exit(0);
+  });
 });
 
 server.listen(port, () => {
