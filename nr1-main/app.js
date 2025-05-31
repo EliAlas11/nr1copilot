@@ -1,5 +1,6 @@
 // app.js
 // Main entry for the professional backend
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -41,7 +42,7 @@ app.use(
     },
     extensions: ['html'],
     fallthrough: false, // Do not allow access outside public
-  })
+  }),
 );
 
 // Redis/Queue setup
@@ -49,15 +50,18 @@ let videoQueue;
 let redisConnectionHealthy = false;
 try {
   const redis = new IORedis(redisUrl);
-  redis.ping().then(() => {
-    redis.disconnect();
-    videoQueue = new Queue('video-processing', { connection: new IORedis(redisUrl) });
-    redisConnectionHealthy = true;
-    logger.info('✅ Redis connection established.');
-  }).catch((err) => {
-    logger.error('❌ Failed to connect to Redis:', err.message);
-    if (env === 'production') process.exit(1);
-  });
+  redis
+    .ping()
+    .then(() => {
+      redis.disconnect();
+      videoQueue = new Queue('video-processing', { connection: new IORedis(redisUrl) });
+      redisConnectionHealthy = true;
+      logger.info('✅ Redis connection established.');
+    })
+    .catch((err) => {
+      logger.error('❌ Failed to connect to Redis:', err.message);
+      if (env === 'production') process.exit(1);
+    });
 } catch (err) {
   logger.error('❌ Redis setup error:', err.message);
   if (env === 'production') process.exit(1);
@@ -72,9 +76,12 @@ app.get('/health', (req, res) => {
     port,
   });
 });
-app.get('/health/dependencies', asyncHandler(async (req, res) => {
-  res.json(await checkDependencies(redisConnectionHealthy));
-}));
+app.get(
+  '/health/dependencies',
+  asyncHandler(async (req, res) => {
+    res.json(await checkDependencies(redisConnectionHealthy));
+  }),
+);
 
 // API routes (to be modularized further)
 app.use('/api/videos', videoRoutes);

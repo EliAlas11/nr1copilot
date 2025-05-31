@@ -24,14 +24,23 @@ exports.validate = async (req, res) => {
   logger.info('Validating URL:', url);
   const videoId = extractVideoId(url);
   if (!videoId) {
-    return res.json({ success: true, isValid: false, videoId: null, error: 'Invalid YouTube URL format' });
+    return res.json({
+      success: true,
+      isValid: false,
+      videoId: null,
+      error: 'Invalid YouTube URL format',
+    });
   }
   let canAccess = false;
   let accessError = null;
   try {
     const testUrl = `https://www.youtube.com/watch?v=${videoId}`;
     let isValid = false;
-    try { isValid = ytdl.validateURL(testUrl); } catch (e) { accessError = 'Invalid YouTube URL format'; }
+    try {
+      isValid = ytdl.validateURL(testUrl);
+    } catch (e) {
+      accessError = 'Invalid YouTube URL format';
+    }
     if (isValid) {
       try {
         await ytdl.getBasicInfo(testUrl);
@@ -60,10 +69,18 @@ exports.info = async (req, res) => {
     const info = await ytdl.getInfo(url);
     const duration = parseInt(info.videoDetails.lengthSeconds) || 0;
     if (duration > MAX_DURATION_SEC) {
-      return errorResponse(res, 400, `Video is too long. Maximum duration is ${MAX_DURATION_SEC / 60} minutes.`);
+      return errorResponse(
+        res,
+        400,
+        `Video is too long. Maximum duration is ${MAX_DURATION_SEC / 60} minutes.`,
+      );
     }
     if (duration < MIN_DURATION_SEC) {
-      return errorResponse(res, 400, `Video is too short. Minimum duration is ${MIN_DURATION_SEC} seconds.`);
+      return errorResponse(
+        res,
+        400,
+        `Video is too short. Minimum duration is ${MIN_DURATION_SEC} seconds.`,
+      );
     }
     res.json({
       success: true,

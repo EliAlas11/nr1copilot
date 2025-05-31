@@ -1,12 +1,11 @@
 // BullMQ worker for processing video jobs
-const { Worker } = require("bullmq");
-const IORedis = require("ioredis");
-const path = require("path");
-const ytdl = require("ytdl-core");
-const fs = require("fs");
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
-const { Worker: NodeWorker } = require("worker_threads");
-
+const { Worker } = require('bullmq');
+const IORedis = require('ioredis');
+const path = require('path');
+const ytdl = require('ytdl-core');
+const fs = require('fs');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { Worker: NodeWorker } = require('worker_threads');
 
 // ENVIRONMENT VALIDATION
 const requiredEnv = [
@@ -20,7 +19,7 @@ if (missingEnv.length) {
 // Harden Redis connection
 let connection;
 try {
-  connection = new IORedis(process.env.REDIS_URL || "redis://localhost:6379");
+  connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379');
   connection.on('error', (err) => {
     console.warn('⚠️ Redis connection error:', err.message);
   });
@@ -29,9 +28,9 @@ try {
   // TODO: Add fallback or degrade gracefully
 }
 
-const videosDir = path.join(__dirname, "videos");
-const processedDir = path.join(videosDir, "processed");
-const tempDir = path.join(videosDir, "temp");
+const videosDir = path.join(__dirname, 'videos');
+const processedDir = path.join(videosDir, 'processed');
+const tempDir = path.join(videosDir, 'temp');
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
@@ -51,8 +50,8 @@ async function uploadToS3(filePath, key) {
       Bucket: S3_BUCKET,
       Key: key,
       Body: fileStream,
-      ContentType: "video/mp4",
-      ACL: "public-read",
+      ContentType: 'video/mp4',
+      ACL: 'public-read',
     }),
   );
   return `https://${S3_BUCKET}.s3.amazonaws.com/${key}`;
@@ -61,21 +60,19 @@ async function uploadToS3(filePath, key) {
 // Offload CPU-intensive video processing to a worker thread
 function processInWorker(data) {
   return new Promise((resolve, reject) => {
-    const worker = new NodeWorker(
-      path.join(__dirname, "videoWorkerThread.js"),
-      { workerData: data },
-    );
-    worker.on("message", resolve);
-    worker.on("error", reject);
-    worker.on("exit", (code) => {
-      if (code !== 0)
-        reject(new Error(`Worker stopped with exit code ${code}`));
+    const worker = new NodeWorker(path.join(__dirname, 'videoWorkerThread.js'), {
+      workerData: data,
+    });
+    worker.on('message', resolve);
+    worker.on('error', reject);
+    worker.on('exit', (code) => {
+      if (code !== 0) reject(new Error(`Worker stopped with exit code ${code}`));
     });
   });
 }
 
 const worker = new Worker(
-  "video-processing",
+  'video-processing',
   async (job) => {
     const { videoId, url } = job.data;
     let downloadedPath = null;
@@ -87,14 +84,14 @@ const worker = new Worker(
       if (!fs.existsSync(downloadedPath)) {
         await new Promise((resolve, reject) => {
           const stream = ytdl(videoUrl, {
-            quality: "highest",
-            filter: "audioandvideo",
+            quality: 'highest',
+            filter: 'audioandvideo',
           });
           const writeStream = fs.createWriteStream(downloadedPath);
           stream.pipe(writeStream);
-          stream.on("end", resolve);
-          stream.on("error", reject);
-          writeStream.on("error", reject);
+          stream.on('end', resolve);
+          stream.on('error', reject);
+          writeStream.on('error', reject);
         });
       }
       // Process video (create viral clip)
@@ -108,7 +105,7 @@ const worker = new Worker(
       // After processing, upload to S3
       const s3Key = `processed/${path.basename(outputPath)}`;
       const s3Url = await uploadToS3(outputPath, s3Key);
-      return { status: "done", output: outputPath, s3Url };
+      return { status: 'done', output: outputPath, s3Url };
     } catch (err) {
       if (outputPath && fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
       throw err;
@@ -117,10 +114,10 @@ const worker = new Worker(
   { connection },
 );
 
-worker.on("completed", (job) => {
+worker.on('completed', (job) => {
   console.log(`Job ${job.id} completed`);
 });
-worker.on("failed", (job, err) => {
+worker.on('failed', (job, err) => {
   console.error(`Job ${job.id} failed:`, err);
 });
 

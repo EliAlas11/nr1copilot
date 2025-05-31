@@ -1,18 +1,18 @@
 // service-worker.js
-const CACHE_NAME = "viral-clip-cache-v1";
-const RUNTIME_CACHE = "viral-clip-runtime-v1";
-const OFFLINE_URL = "/offline.html";
+const CACHE_NAME = 'viral-clip-cache-v1';
+const RUNTIME_CACHE = 'viral-clip-runtime-v1';
+const OFFLINE_URL = '/offline.html';
 const ASSETS = [
-  "/",
-  "/index.html",
-  "/favicon.ico",
-  "/public/styles.css",
-  "/public/main.js",
-  "/public/manifest.json",
+  '/',
+  '/index.html',
+  '/favicon.ico',
+  '/public/styles.css',
+  '/public/main.js',
+  '/public/manifest.json',
   // Add more static assets as needed
 ];
 
-self.addEventListener("install", (event) => {
+self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
@@ -22,7 +22,7 @@ self.addEventListener("install", (event) => {
   );
 });
 
-self.addEventListener("activate", (event) => {
+self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
@@ -36,21 +36,21 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
   event.respondWith(
     (async () => {
       const cache = await caches.open(RUNTIME_CACHE);
       try {
         const response = await fetch(event.request);
-        if (response && response.status === 200 && response.type === "basic") {
+        if (response && response.status === 200 && response.type === 'basic') {
           cache.put(event.request, response.clone());
         }
         return response;
       } catch (err) {
         const cached = await cache.match(event.request);
         if (cached) return cached;
-        if (event.request.mode === "navigate") {
+        if (event.request.mode === 'navigate') {
           return caches.match(OFFLINE_URL);
         }
         return caches.match(event.request);
@@ -60,28 +60,28 @@ self.addEventListener("fetch", (event) => {
 });
 
 // Push notifications (stub for future integration)
-self.addEventListener("push", function (event) {
-  const data = event.data ? event.data.text() : "Viral Clip Generator update!";
+self.addEventListener('push', function (event) {
+  const data = event.data ? event.data.text() : 'Viral Clip Generator update!';
   event.waitUntil(
-    self.registration.showNotification("Viral Clip Generator", {
+    self.registration.showNotification('Viral Clip Generator', {
       body: data,
-      icon: "/favicon.ico",
+      icon: '/favicon.ico',
     }),
   );
 });
 
 // Advanced: Add background sync for feedback and push notification support
-self.addEventListener("sync", function (event) {
-  if (event.tag === "sync-feedback") {
+self.addEventListener('sync', function (event) {
+  if (event.tag === 'sync-feedback') {
     event.waitUntil(
       (async () => {
         // Example: Try to send queued feedback to the server
         const feedbacks = await getQueuedFeedback();
         for (const feedback of feedbacks) {
           try {
-            await fetch("/api/feedback", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
+            await fetch('/api/feedback', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(feedback),
             });
             await removeQueuedFeedback(feedback);
@@ -104,7 +104,7 @@ async function removeQueuedFeedback(feedback) {
 }
 
 // Advanced: Push notification click handler
-self.addEventListener("notificationclick", function (event) {
+self.addEventListener('notificationclick', function (event) {
   event.notification.close();
-  event.waitUntil(clients.openWindow("/"));
+  event.waitUntil(clients.openWindow('/'));
 });

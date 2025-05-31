@@ -1,16 +1,18 @@
-// eslint.config.js
+import { FlatCompat } from '@eslint/eslintrc';
+const compat = new FlatCompat();
+
 export default [
+  ...compat.extends('eslint:recommended'),
   {
-    files: ["**/*.js"],
+    files: ['**/*.js'],
     languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: "module"
+      ecmaVersion: 2021,
+      sourceType: 'module',
     },
     rules: {
-      semi: ["error", "always"],
-      quotes: ["error", "double"],
-      "no-unused-vars": "warn",
-      "no-console": "off"
-    }
-  }
+      'no-unused-vars': 'warn',
+      'no-console': 'error',
+      'semi': ['error', 'always'],
+    },
+  },
 ];

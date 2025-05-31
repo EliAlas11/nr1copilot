@@ -2,8 +2,8 @@
 // Professional, robust YouTube video ID extraction
 module.exports = function extractVideoId(url) {
   try {
-    if (!url || typeof url !== "string") return null;
-    url = url.trim().replace(/\s+/g, "");
+    if (!url || typeof url !== 'string') return null;
+    url = url.trim().replace(/\s+/g, '');
     if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
     const patterns = [
       /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,

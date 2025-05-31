@@ -31,7 +31,5 @@
       "icons": [{ "src": "/favicon.ico", "sizes": "96x96", "type": "image/x-icon" }]
     }
   ],
-  "screenshots": [
-    { "src": "/public/screenshot1.png", "sizes": "600x800", "type": "image/png" }
-  ]
+  "screenshots": [{ "src": "/public/screenshot1.png", "sizes": "600x800", "type": "image/png" }]
 }

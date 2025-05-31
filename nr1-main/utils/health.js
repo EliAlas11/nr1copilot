@@ -15,20 +15,27 @@ async function checkDependencies(redisConnectionHealthy) {
       redis.disconnect();
       checks.redis = 'ok';
     }
-  } catch (e) { checks.redis = 'error'; }
+  } catch (e) {
+    checks.redis = 'error';
+  }
   // S3
   try {
     checks.s3 = s3Bucket ? 'configured' : 'missing';
-  } catch (e) { checks.s3 = 'error'; }
+  } catch (e) {
+    checks.s3 = 'error';
+  }
   // FFmpeg
   try {
     await new Promise((resolve, reject) => {
       ffmpeg.getAvailableFormats((err) => {
-        if (err) reject(err); else resolve();
+        if (err) reject(err);
+        else resolve();
       });
     });
     checks.ffmpeg = 'ok';
-  } catch (e) { checks.ffmpeg = 'error'; }
+  } catch (e) {
+    checks.ffmpeg = 'error';
+  }
   return checks;
 }
 

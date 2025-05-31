@@ -1,30 +1,30 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const videoController = require("../controllers/videoController");
+const videoController = require('../controllers/videoController');
 
 /**
  * Route for validating YouTube URL
  * Example: POST /videos/validate { url }
  */
-router.post("/validate", videoController.validate);
+router.post('/validate', videoController.validate);
 
 /**
  * Route for getting video information
  * Example: GET /videos/info/:videoId
  */
-router.get("/info/:videoId", videoController.info);
+router.get('/info/:videoId', videoController.info);
 
 /**
  * Route for submitting a video processing job
  * Example: POST /videos/process { videoId, url }
  */
-router.post("/process", videoController.process);
+router.post('/process', videoController.process);
 
 /**
  * Route for checking job status
  * Example: GET /videos/job/:jobId
  */
-router.get("/job/:jobId", videoController.checkJobStatus);
+router.get('/job/:jobId', videoController.checkJobStatus);
 
 // Monitoring/alerting placeholder
 function notifyMonitoring(event, details) {

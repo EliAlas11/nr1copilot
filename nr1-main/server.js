@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -17,10 +19,12 @@ const compression = require('compression');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
 const swaggerDocument = YAML.load(path.join(__dirname, 'swagger.yaml'));
+const mongoose = require('mongoose');
+const userRoutes = require('./routes/v1/user-routes');
 
 // Set FFmpeg path with error handling
 try {
-  const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
+  const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
   ffmpeg.setFfmpegPath(ffmpegPath);
   // console.log("✅ FFmpeg configured successfully");
   logWithLevel('info', '✅ FFmpeg configured successfully');
@@ -34,42 +38,44 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Enhanced trust proxy configuration for Replit
-app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
+app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 
 // CORS configuration
 app.use(
   cors({
     origin: true,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   }),
 );
 
 // Security headers
 app.use((req, res, next) => {
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 });
 
 // Use Helmet for additional security headers
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", 'https:', 'blob:'],
-      styleSrc: ["'self'", 'https:', 'blob:'],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", 'wss:', 'https:'],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: [],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", 'https:', 'blob:'],
+        styleSrc: ["'self'", 'https:', 'blob:'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'wss:', 'https:'],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
     },
-  },
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  hsts: { maxAge: 31536000, includeSubDomains: true },
-}));
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: { maxAge: 31536000, includeSubDomains: true },
+  }),
+);
 
 // --- Swagger API Docs ---
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -79,36 +85,34 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // increased limit for development
   message: {
-    error: "Too many requests from this IP, please try again later.",
+    error: 'Too many requests from this IP, please try again later.',
     retryAfter: 15 * 60,
   },
   standardHeaders: true,
   legacyHeaders: false,
   trustProxy: true,
   keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress || "unknown";
+    return req.ip || req.connection.remoteAddress || 'unknown';
   },
   skip: (req) => {
     return (
-      req.path === "/health" ||
-      req.path.startsWith("/api/videos/") ||
-      req.method === "OPTIONS"
+      req.path === '/health' || req.path.startsWith('/api/videos/') || req.method === 'OPTIONS'
     );
   },
 });
 
-app.use("/api", limiter);
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use('/api', limiter);
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Ensure directories exist
-const videosDir = path.join(__dirname, "videos");
-const processedDir = path.join(videosDir, "processed");
-const tempDir = path.join(videosDir, "temp");
+const videosDir = path.join(__dirname, 'videos');
+const processedDir = path.join(videosDir, 'processed');
+const tempDir = path.join(videosDir, 'temp');
 
 [videosDir, processedDir, tempDir].forEach((dir) => {
   if (!fs.existsSync(dir)) {
@@ -145,11 +149,11 @@ setInterval(cleanupOldFiles, 30 * 60 * 1000);
 
 // Log errors to a file in production
 const logStream =
-  process.env.NODE_ENV === "production"
-    ? fs.createWriteStream(path.join(__dirname, "server.log"), { flags: "a" })
+  process.env.NODE_ENV === 'production'
+    ? fs.createWriteStream(path.join(__dirname, 'server.log'), { flags: 'a' })
     : null;
 if (logStream) {
-  app.use(morgan("combined", { stream: logStream }));
+  app.use(morgan('combined', { stream: logStream }));
 }
 
 // ENVIRONMENT VALIDATION
@@ -171,14 +175,19 @@ function checkDependencies() {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
     const redis = new IORedis(redisUrl);
     checks.redis = 'connecting';
-    redis.ping().then(() => {
-      checks.redis = 'ok';
-      redis.disconnect();
-    }).catch(() => {
-      checks.redis = 'unreachable';
-      redis.disconnect();
-    });
-  } catch (e) { checks.redis = 'error'; }
+    redis
+      .ping()
+      .then(() => {
+        checks.redis = 'ok';
+        redis.disconnect();
+      })
+      .catch(() => {
+        checks.redis = 'unreachable';
+        redis.disconnect();
+      });
+  } catch (e) {
+    checks.redis = 'error';
+  }
   // S3
   try {
     if (process.env.AWS_S3_BUCKET) {
@@ -186,13 +195,17 @@ function checkDependencies() {
     } else {
       checks.s3 = 'missing';
     }
-  } catch (e) { checks.s3 = 'error'; }
+  } catch (e) {
+    checks.s3 = 'error';
+  }
   // FFmpeg
   try {
     ffmpeg.getAvailableFormats((err) => {
       checks.ffmpeg = err ? 'error' : 'ok';
     });
-  } catch (e) { checks.ffmpeg = 'error'; }
+  } catch (e) {
+    checks.ffmpeg = 'error';
+  }
   return checks;
 }
 app.get('/health/dependencies', async (req, res) => {
@@ -214,8 +227,8 @@ function errorResponse(res, status, message) {
 // --- Modularize Video ID Extraction ---
 function extractVideoId(url) {
   try {
-    if (!url || typeof url !== "string") return null;
-    url = url.trim().replace(/\s+/g, "");
+    if (!url || typeof url !== 'string') return null;
+    url = url.trim().replace(/\s+/g, '');
     if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
     const patterns = [
       /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
@@ -232,7 +245,7 @@ function extractVideoId(url) {
     }
     return null;
   } catch (error) {
-    logger.error("Video ID extraction error:", error.message);
+    logger.error('Video ID extraction error:', error.message);
     return null;
   }
 }
@@ -243,23 +256,19 @@ async function getVideoInfo(videoId) {
     const timeout = setTimeout(() => {
       // console.log("⏰ Video info timeout for:", videoId);
       logWithLevel('info', '⏰ Video info timeout for:', videoId);
-      reject(new Error("Request timeout - video may be unavailable"));
+      reject(new Error('Request timeout - video may be unavailable'));
     }, 30000);
 
     try {
       const url = `https://www.youtube.com/watch?v=${videoId}`;
       // console.log("🔍 Getting video info for:", videoId, "URL:", url);
-      logWithLevel('info', "🔍 Getting video info for:", videoId, "URL:", url);
+      logWithLevel('info', '🔍 Getting video info for:', videoId, 'URL:', url);
 
-      if (
-        !videoId ||
-        videoId.length !== 11 ||
-        !/^[a-zA-Z0-9_-]+$/.test(videoId)
-      ) {
+      if (!videoId || videoId.length !== 11 || !/^[a-zA-Z0-9_-]+$/.test(videoId)) {
         clearTimeout(timeout);
         // console.error("❌ Invalid video ID format:", videoId);
-        logWithLevel('error', "❌ Invalid video ID format:", videoId);
-        reject(new Error("Invalid video ID format"));
+        logWithLevel('error', '❌ Invalid video ID format:', videoId);
+        reject(new Error('Invalid video ID format'));
         return;
       }
 
@@ -268,140 +277,112 @@ async function getVideoInfo(videoId) {
         if (!ytdl.validateURL(url)) {
           clearTimeout(timeout);
           // console.error("❌ Invalid YouTube URL:", url);
-          logWithLevel('error', "❌ Invalid YouTube URL:", url);
-          reject(new Error("Invalid YouTube URL"));
+          logWithLevel('error', '❌ Invalid YouTube URL:', url);
+          reject(new Error('Invalid YouTube URL'));
           return;
         }
       } catch (validateError) {
         clearTimeout(timeout);
         // console.error("❌ URL validation error:", validateError);
-        logWithLevel('error', "❌ URL validation error:", validateError);
-        reject(
-          new Error("Failed to validate YouTube URL: " + validateError.message),
-        );
+        logWithLevel('error', '❌ URL validation error:', validateError);
+        reject(new Error('Failed to validate YouTube URL: ' + validateError.message));
         return;
       }
 
       // console.log("✅ URL validation passed, getting info...");
-      logWithLevel('info', "✅ URL validation passed, getting info...");
+      logWithLevel('info', '✅ URL validation passed, getting info...');
 
       ytdl
         .getInfo(url, {
           requestOptions: {
             headers: {
-              "User-Agent":
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-              "Accept-Language": "en-US,en;q=0.9",
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept-Language': 'en-US,en;q=0.9',
             },
           },
         })
         .then((info) => {
           clearTimeout(timeout);
           // console.log("📄 Raw video info received");
-          logWithLevel('info', "📄 Raw video info received");
+          logWithLevel('info', '📄 Raw video info received');
 
           if (!info || !info.videoDetails) {
             // console.error("❌ No video details in response");
-            logWithLevel('error', "❌ No video details in response");
-            reject(new Error("Invalid video information received"));
+            logWithLevel('error', '❌ No video details in response');
+            reject(new Error('Invalid video information received'));
             return;
           }
 
           const duration = parseInt(info.videoDetails.lengthSeconds) || 0;
           // console.log("⏱️ Video duration:", duration, "seconds");
-          logWithLevel('info', "⏱️ Video duration:", duration, "seconds");
+          logWithLevel('info', '⏱️ Video duration:', duration, 'seconds');
 
           if (duration > MAX_DURATION_SEC) {
             reject(
-              new Error(
-                `Video is too long. Maximum duration is ${MAX_DURATION_SEC / 60} minutes.`,
-              ),
+              new Error(`Video is too long. Maximum duration is ${MAX_DURATION_SEC / 60} minutes.`),
             );
             return;
           }
 
           if (duration < MIN_DURATION_SEC) {
             reject(
-              new Error(
-                `Video is too short. Minimum duration is ${MIN_DURATION_SEC} seconds.`,
-              ),
+              new Error(`Video is too short. Minimum duration is ${MIN_DURATION_SEC} seconds.`),
             );
             return;
           }
 
           const result = {
-            title: info.videoDetails.title || "Unknown Title",
+            title: info.videoDetails.title || 'Unknown Title',
             duration: duration,
-            description: info.videoDetails.description || "",
+            description: info.videoDetails.description || '',
             thumbnails: info.videoDetails.thumbnails || [],
-            viewCount: info.videoDetails.viewCount || "0",
-            author: info.videoDetails.author?.name || "Unknown Author",
+            viewCount: info.videoDetails.viewCount || '0',
+            author: info.videoDetails.author?.name || 'Unknown Author',
           };
 
           // console.log("✅ Video info retrieved successfully:", result.title);
-          logWithLevel('info', "✅ Video info retrieved successfully:", result.title);
+          logWithLevel('info', '✅ Video info retrieved successfully:', result.title);
           resolve(result);
         })
         .catch((error) => {
           clearTimeout(timeout);
           // console.error("❌ ytdl.getInfo error:", error);
 
-          let errorMessage = "Failed to get video information";
+          let errorMessage = 'Failed to get video information';
 
           // Handle both error objects and strings
           const errorString = error
             ? error.message || error.toString() || JSON.stringify(error)
-            : "Unknown error";
+            : 'Unknown error';
           // console.error("❌ Error details:", errorString);
-          logWithLevel('error', "❌ Error details:", errorString);
+          logWithLevel('error', '❌ Error details:', errorString);
 
           if (errorString) {
-            if (
-              errorString.includes("Video unavailable") ||
-              errorString.includes("unavailable")
-            ) {
-              errorMessage = "Video is unavailable, private, or deleted";
+            if (errorString.includes('Video unavailable') || errorString.includes('unavailable')) {
+              errorMessage = 'Video is unavailable, private, or deleted';
+            } else if (errorString.includes('Sign in') || errorString.includes('age')) {
+              errorMessage = 'Age-restricted video - cannot access';
             } else if (
-              errorString.includes("Sign in") ||
-              errorString.includes("age")
+              errorString.includes('This video is not available') ||
+              errorString.includes('not available')
             ) {
-              errorMessage = "Age-restricted video - cannot access";
-            } else if (
-              errorString.includes("This video is not available") ||
-              errorString.includes("not available")
-            ) {
-              errorMessage = "Video is not available in this region";
-            } else if (
-              errorString.includes("Private video") ||
-              errorString.includes("private")
-            ) {
-              errorMessage = "This is a private video";
-            } else if (
-              errorString.includes("429") ||
-              errorString.includes("Too Many Requests")
-            ) {
-              errorMessage = "Too many requests - please try again later";
-            } else if (
-              errorString.includes("403") ||
-              errorString.includes("Forbidden")
-            ) {
-              errorMessage = "Access forbidden - video may be restricted";
-            } else if (
-              errorString.includes("404") ||
-              errorString.includes("Not Found")
-            ) {
-              errorMessage = "Video not found or URL is invalid";
-            } else if (
-              errorString.includes("network") ||
-              errorString.includes("ENOTFOUND")
-            ) {
-              errorMessage = "Network error - please check your connection";
+              errorMessage = 'Video is not available in this region';
+            } else if (errorString.includes('Private video') || errorString.includes('private')) {
+              errorMessage = 'This is a private video';
+            } else if (errorString.includes('429') || errorString.includes('Too Many Requests')) {
+              errorMessage = 'Too many requests - please try again later';
+            } else if (errorString.includes('403') || errorString.includes('Forbidden')) {
+              errorMessage = 'Access forbidden - video may be restricted';
+            } else if (errorString.includes('404') || errorString.includes('Not Found')) {
+              errorMessage = 'Video not found or URL is invalid';
+            } else if (errorString.includes('network') || errorString.includes('ENOTFOUND')) {
+              errorMessage = 'Network error - please check your connection';
             } else {
               errorMessage = `Failed to access video: ${errorString}`;
             }
           } else {
-            errorMessage =
-              "Unknown error occurred while getting video information";
+            errorMessage = 'Unknown error occurred while getting video information';
           }
 
           reject(new Error(errorMessage));
@@ -409,12 +390,9 @@ async function getVideoInfo(videoId) {
     } catch (error) {
       clearTimeout(timeout);
       // console.error("❌ Video info setup error:", error);
-      logWithLevel('error', "❌ Video info setup error:", error);
+      logWithLevel('error', '❌ Video info setup error:', error);
       reject(
-        new Error(
-          "Failed to initialize video info request: " +
-            (error.message || "Unknown error"),
-        ),
+        new Error('Failed to initialize video info request: ' + (error.message || 'Unknown error')),
       );
     }
   });
@@ -423,19 +401,19 @@ async function getVideoInfo(videoId) {
 // API Routes
 
 // Enhanced validation endpoint
-app.post("/api/validate", async (req, res) => {
+app.post('/api/validate', async (req, res) => {
   try {
     const { url } = req.body;
 
     if (!url) {
       return res.status(400).json({
         success: false,
-        error: "URL is required",
+        error: 'URL is required',
       });
     }
 
     // console.log("🔍 Validating URL:", url);
-    logWithLevel('info', "🔍 Validating URL:", url);
+    logWithLevel('info', '🔍 Validating URL:', url);
 
     const videoId = extractVideoId(url);
 
@@ -444,7 +422,7 @@ app.post("/api/validate", async (req, res) => {
         success: true,
         isValid: false,
         videoId: null,
-        error: "Invalid YouTube URL format",
+        error: 'Invalid YouTube URL format',
       });
     }
 
@@ -461,8 +439,8 @@ app.post("/api/validate", async (req, res) => {
         isValid = ytdl.validateURL(testUrl);
       } catch (validateError) {
         // console.warn("⚠️ URL validation failed:", validateError);
-        logWithLevel('warn', "⚠️ URL validation failed:", validateError);
-        accessError = "Invalid YouTube URL format";
+        logWithLevel('warn', '⚠️ URL validation failed:', validateError);
+        accessError = 'Invalid YouTube URL format';
       }
 
       if (isValid) {
@@ -470,35 +448,31 @@ app.post("/api/validate", async (req, res) => {
           await ytdl.getBasicInfo(testUrl, {
             requestOptions: {
               headers: {
-                "User-Agent":
-                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
               },
             },
           });
           canAccess = true;
         } catch (basicInfoError) {
           // console.warn("⚠️ Basic info fetch failed:", basicInfoError);
-          logWithLevel('warn', "⚠️ Basic info fetch failed:", basicInfoError);
+          logWithLevel('warn', '⚠️ Basic info fetch failed:', basicInfoError);
           if (basicInfoError && basicInfoError.message) {
-            if (basicInfoError.message.includes("Video unavailable")) {
-              accessError = "Video is unavailable, private, or deleted";
-            } else if (basicInfoError.message.includes("Sign in")) {
-              accessError = "Age-restricted video - cannot process";
+            if (basicInfoError.message.includes('Video unavailable')) {
+              accessError = 'Video is unavailable, private, or deleted';
+            } else if (basicInfoError.message.includes('Sign in')) {
+              accessError = 'Age-restricted video - cannot process';
             } else {
-              accessError =
-                "Video may not be accessible: " + basicInfoError.message;
+              accessError = 'Video may not be accessible: ' + basicInfoError.message;
             }
           } else {
-            accessError = "Video may not be accessible (unknown error)";
+            accessError = 'Video may not be accessible (unknown error)';
           }
         }
       }
     } catch (testError) {
       // console.warn("⚠️ Video access test failed:", testError);
-      logWithLevel('warn', "⚠️ Video access test failed:", testError);
-      accessError =
-        "Failed to test video accessibility: " +
-        (testError.message || "Unknown error");
+      logWithLevel('warn', '⚠️ Video access test failed:', testError);
+      accessError = 'Failed to test video accessibility: ' + (testError.message || 'Unknown error');
     }
 
     res.json({
@@ -510,28 +484,28 @@ app.post("/api/validate", async (req, res) => {
     });
   } catch (error) {
     // console.error("❌ Validation error:", error);
-    logWithLevel('error', "❌ Validation error:", error);
+    logWithLevel('error', '❌ Validation error:', error);
     res.status(500).json({
       success: false,
-      error: "Validation failed: " + (error.message || "Unknown error"),
+      error: 'Validation failed: ' + (error.message || 'Unknown error'),
     });
   }
 });
 
 // Video info endpoint
-app.get("/api/info/:videoId", async (req, res) => {
+app.get('/api/info/:videoId', async (req, res) => {
   try {
     const { videoId } = req.params;
 
     if (!videoId || videoId.length !== 11) {
       return res.status(400).json({
         success: false,
-        error: "Invalid video ID format",
+        error: 'Invalid video ID format',
       });
     }
 
     // console.log("📄 Getting info for video ID:", videoId);
-    logWithLevel('info', "📄 Getting info for video ID:", videoId);
+    logWithLevel('info', '📄 Getting info for video ID:', videoId);
     const info = await getVideoInfo(videoId);
 
     res.json({
@@ -547,27 +521,21 @@ app.get("/api/info/:videoId", async (req, res) => {
     // );
 
     let statusCode = 500;
-    let errorMessage = "Failed to get video information";
+    let errorMessage = 'Failed to get video information';
 
     if (error && error.message) {
       errorMessage = error.message;
-      if (
-        error.message.includes("unavailable") ||
-        error.message.includes("private")
-      ) {
+      if (error.message.includes('unavailable') || error.message.includes('private')) {
         statusCode = 404;
-      } else if (
-        error.message.includes("too long") ||
-        error.message.includes("too short")
-      ) {
+      } else if (error.message.includes('too long') || error.message.includes('too short')) {
         statusCode = 400;
-      } else if (error.message.includes("timeout")) {
+      } else if (error.message.includes('timeout')) {
         statusCode = 408;
       }
     } else {
       // console.error("❌ Empty error object received");
-      logWithLevel('error', "❌ Empty error object received");
-      errorMessage = "Unknown error occurred while getting video information";
+      logWithLevel('error', '❌ Empty error object received');
+      errorMessage = 'Unknown error occurred while getting video information';
     }
 
     res.status(statusCode).json({
@@ -578,11 +546,13 @@ app.get("/api/info/:videoId", async (req, res) => {
 });
 
 // Main processing endpoint (now queues job)
-app.post("/api/process", async (req, res) => {
+app.post('/api/process', async (req, res) => {
   try {
     if (!videoQueue) {
       logger.error('Queue unavailable: Redis is not connected.');
-      return res.status(503).json({ success: false, error: 'Queue unavailable: Redis is not connected.' });
+      return res
+        .status(503)
+        .json({ success: false, error: 'Queue unavailable: Redis is not connected.' });
     }
     const schema = Joi.object({
       videoId: Joi.string().length(11).optional(),
@@ -602,29 +572,27 @@ app.post("/api/process", async (req, res) => {
       logger.warn('Invalid YouTube URL or video ID');
       return res.status(400).json({
         success: false,
-        error: "Valid YouTube URL or video ID is required",
+        error: 'Valid YouTube URL or video ID is required',
       });
     }
     // Add job to BullMQ queue
-    const job = await videoQueue.add("process", { videoId, url });
+    const job = await videoQueue.add('process', { videoId, url });
     res.json({ success: true, jobId: job.id });
   } catch (error) {
     logger.error(`Failed to queue video processing job: ${error.message}`);
-    res
-      .status(500)
-      .json({ success: false, error: "Failed to queue video processing job" });
+    res.status(500).json({ success: false, error: 'Failed to queue video processing job' });
   }
 });
 
 // Job status endpoint
-app.get("/api/job/:jobId", async (req, res) => {
+app.get('/api/job/:jobId', async (req, res) => {
   try {
     if (!videoQueue) {
       logger.error('Queue unavailable: Redis is not connected.');
       return res.status(503).json({ error: 'Queue unavailable: Redis is not connected.' });
     }
     const job = await videoQueue.getJob(req.params.jobId);
-    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (!job) return res.status(404).json({ error: 'Job not found' });
     const state = await job.getState();
     const progress = job._progress || 0;
     res.json({
@@ -635,18 +603,18 @@ app.get("/api/job/:jobId", async (req, res) => {
       failedReason: job.failedReason || null,
     });
   } catch {
-    res.status(500).json({ error: "Failed to get job status" });
+    res.status(500).json({ error: 'Failed to get job status' });
   }
 });
 
 // Video serving endpoint
-app.get("/api/videos/:id", (req, res) => {
+app.get('/api/videos/:id', (req, res) => {
   const { id } = req.params;
   const videoPath = path.join(processedDir, `${id}.mp4`);
 
   if (!fs.existsSync(videoPath)) {
     return res.status(404).json({
-      error: "Video not found",
+      error: 'Video not found',
     });
   }
 
@@ -654,31 +622,31 @@ app.get("/api/videos/:id", (req, res) => {
   const fileSize = stat.size;
   const range = req.headers.range;
 
-  res.setHeader("Content-Type", "video/mp4");
-  res.setHeader("Accept-Ranges", "bytes");
-  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.setHeader('Content-Type', 'video/mp4');
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
 
   if (range) {
-    const parts = range.replace(/bytes=/, "").split("-");
+    const parts = range.replace(/bytes=/, '').split('-');
     const start = parseInt(parts[0], 10);
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
     if (start >= fileSize || end >= fileSize) {
-      return res.status(416).json({ error: "Range not satisfiable" });
+      return res.status(416).json({ error: 'Range not satisfiable' });
     }
 
     const chunksize = end - start + 1;
     const file = fs.createReadStream(videoPath, { start, end });
 
     res.writeHead(206, {
-      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-      "Content-Length": chunksize,
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Content-Length': chunksize,
     });
 
     file.pipe(res);
   } else {
     res.writeHead(200, {
-      "Content-Length": fileSize,
+      'Content-Length': fileSize,
     });
 
     fs.createReadStream(videoPath).pipe(res);
@@ -686,33 +654,33 @@ app.get("/api/videos/:id", (req, res) => {
 });
 
 // Sample video endpoint
-app.get("/api/videos/sample", (req, res) => {
-  const samplePath = path.join(processedDir, "sample.mp4");
+app.get('/api/videos/sample', (req, res) => {
+  const samplePath = path.join(processedDir, 'sample.mp4');
 
   if (fs.existsSync(samplePath)) {
     const stat = fs.statSync(samplePath);
     res.writeHead(200, {
-      "Content-Length": stat.size,
-      "Content-Type": "video/mp4",
+      'Content-Length': stat.size,
+      'Content-Type': 'video/mp4',
     });
     fs.createReadStream(samplePath).pipe(res);
   } else {
-    res.status(404).json({ error: "Sample video not available" });
+    res.status(404).json({ error: 'Sample video not available' });
   }
 });
 
 // Homepage
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Health check
-app.get("/health", (req, res) => {
+app.get('/health', (req, res) => {
   res.status(200).json({
-    status: "Server is running properly",
+    status: 'Server is running properly',
     timestamp: new Date().toISOString(),
     port: port,
-    environment: process.env.NODE_ENV || "development",
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
@@ -753,7 +721,7 @@ app.use(router);
 
 // 1. Define video duration limits (customize as needed)
 const MAX_DURATION_SEC = 1800; // 30 minutes
-const MIN_DURATION_SEC = 10;   // 10 seconds
+const MIN_DURATION_SEC = 10; // 10 seconds
 
 // 2. Import videoQueue if not already
 let videoQueue;
@@ -789,32 +757,37 @@ if (missingVars.length) {
 }
 
 // 4. Restrict CORS in production
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? (process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : ['https://yourdomain.com'])
-  : [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'http://localhost:5000',
-      'http://127.0.0.1:5000',
-      'http://localhost',
-      'http://127.0.0.1',
-      'https://yourdomain.com',
-    ];
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      logWithLevel('warn', `Blocked CORS origin: ${origin}`);
-      return callback(new Error('Not allowed by CORS'), false);
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-}));
+const allowedOrigins =
+  process.env.NODE_ENV === 'production'
+    ? process.env.CORS_ORIGINS
+      ? process.env.CORS_ORIGINS.split(',')
+      : ['https://yourdomain.com']
+    : [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5000',
+        'http://127.0.0.1:5000',
+        'http://localhost',
+        'http://127.0.0.1',
+        'https://yourdomain.com',
+      ];
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        logWithLevel('warn', `Blocked CORS origin: ${origin}`);
+        return callback(new Error('Not allowed by CORS'), false);
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  }),
+);
 
 // 5. Use winston logger everywhere (replace all console.log/warn/error)
 function log(level, ...args) {
@@ -855,20 +828,27 @@ async function checkDependenciesAsync() {
     } else {
       checks.redis = 'error';
     }
-  } catch (e) { checks.redis = 'error'; }
+  } catch (e) {
+    checks.redis = 'error';
+  }
   // S3
   try {
     checks.s3 = process.env.AWS_S3_BUCKET ? 'configured' : 'missing';
-  } catch (e) { checks.s3 = 'error'; }
+  } catch (e) {
+    checks.s3 = 'error';
+  }
   // FFmpeg
   try {
     await new Promise((resolve, reject) => {
       ffmpeg.getAvailableFormats((err) => {
-        if (err) reject(err); else resolve();
+        if (err) reject(err);
+        else resolve();
       });
     });
     checks.ffmpeg = 'ok';
-  } catch (e) { checks.ffmpeg = 'error'; }
+  } catch (e) {
+    checks.ffmpeg = 'error';
+  }
   return checks;
 }
 app.get('/health/dependencies', async (req, res) => {
@@ -889,7 +869,6 @@ process.on('unhandledRejection', (reason) => {
   logWithLevel('error', 'Unhandled Rejection:', reason);
   process.exit(1);
 });
-// ...existing code...
 
 // Centralized error handler
 app.use((err, req, res, next) => {
@@ -898,8 +877,8 @@ app.use((err, req, res, next) => {
 });
 
 // Graceful shutdown
-process.on("SIGTERM", () => {
-  logWithLevel('info', "🛑 SIGTERM received, shutting down gracefully");
+process.on('SIGTERM', () => {
+  logWithLevel('info', '🛑 SIGTERM received, shutting down gracefully');
   cleanupOldFiles();
   process.exit(0);
 });
@@ -908,23 +887,23 @@ process.on("SIGTERM", () => {
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
+    origin: '*',
+    methods: ['GET', 'POST'],
   },
 });
 
 // BullMQ job events
-const videoQueueEvents = new QueueEvents("video-processing", {
-  connection: new IORedis(process.env.REDIS_URL || "redis://localhost:6379"),
+const videoQueueEvents = new QueueEvents('video-processing', {
+  connection: new IORedis(process.env.REDIS_URL || 'redis://localhost:6379'),
 });
 
-videoQueueEvents.on("progress", ({ jobId, data }) => {
+videoQueueEvents.on('progress', ({ jobId, data }) => {
   io.emit(`job-progress-${jobId}`, data);
 });
-videoQueueEvents.on("completed", ({ jobId, returnvalue }) => {
+videoQueueEvents.on('completed', ({ jobId, returnvalue }) => {
   io.emit(`job-completed-${jobId}`, returnvalue);
 });
-videoQueueEvents.on("failed", ({ jobId, failedReason }) => {
+videoQueueEvents.on('failed', ({ jobId, failedReason }) => {
   io.emit(`job-failed-${jobId}`, failedReason);
 });
 
@@ -933,50 +912,72 @@ const advancedLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 30, // lower limit for sensitive endpoints
   message: {
-    error: "Too many requests. Please slow down.",
+    error: 'Too many requests. Please slow down.',
   },
   keyGenerator: (req) => req.ip,
-  skip: (req) => req.path === "/health" || req.method === "OPTIONS",
+  skip: (req) => req.path === '/health' || req.method === 'OPTIONS',
   handler: (req, res) => {
-    logWithLevel('warn', "Rate limit exceeded:", req.ip, req.originalUrl);
-    res.status(429).json({ error: "Too many requests. Please slow down." });
+    logWithLevel('warn', 'Rate limit exceeded:', req.ip, req.originalUrl);
+    res.status(429).json({ error: 'Too many requests. Please slow down.' });
   },
 });
-app.use("/api/process", advancedLimiter);
+app.use('/api/process', advancedLimiter);
 
 // Setup winston logger
 const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: winston.format.combine(
     winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`)
+    winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`),
   ),
   transports: [
     new winston.transports.Console(),
-    ...(process.env.NODE_ENV === 'production' ? [new winston.transports.File({ filename: 'server.log' })] : [])
-  ]
+    ...(process.env.NODE_ENV === 'production'
+      ? [new winston.transports.File({ filename: 'server.log' })]
+      : []),
+  ],
 });
 
 // --- Extended Health Endpoint ---
-app.get('/health/extended', asyncHandler(async (req, res) => {
-  const checks = await checkDependenciesAsync();
-  const uptime = process.uptime();
-  const memory = process.memoryUsage();
-  let queueLength = null;
-  if (videoQueue) {
-    try {
-      queueLength = await videoQueue.count();
-    } catch {}
-  }
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime,
-    memory,
-    queueLength,
-    dependencies: checks,
+app.get(
+  '/health/extended',
+  asyncHandler(async (req, res) => {
+    const checks = await checkDependenciesAsync();
+    const uptime = process.uptime();
+    const memory = process.memoryUsage();
+    let queueLength = null;
+    if (videoQueue) {
+      try {
+        queueLength = await videoQueue.count();
+      } catch {}
+    }
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime,
+      memory,
+      queueLength,
+      dependencies: checks,
+    });
+  }),
+);
+
+// --- MongoDB connection ---
+const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/nr1main';
+mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => logWithLevel('info', '✅ MongoDB connected'))
+  .catch((err) => {
+    logWithLevel('error', '❌ MongoDB connection error:', err.message);
+    process.exit(1);
   });
-}));
+
+if (!process.env.JWT_SECRET) {
+  logWithLevel('error', 'JWT_SECRET is required in environment');
+  process.exit(1);
+}
+
+// Use user routes
+app.use('/api/v1/user', userRoutes);
 
 // Start server
 server.listen(port, () => {
@@ -986,12 +987,15 @@ server.listen(port, () => {
 
 // Instruct users to use app.js as the new entry point
 // console.warn('server.js is deprecated. Please use app.js as the main entry point for the new professional backend.');
-logWithLevel('warn', 'server.js is deprecated. Please use app.js as the main entry point for the new professional backend.');
+logWithLevel(
+  'warn',
+  'server.js is deprecated. Please use app.js as the main entry point for the new professional backend.',
+);
 require('./app');
 
 // Utility to format logger arguments (avoiding sensitive data)
 function logWithLevel(level, ...args) {
   // Never log sensitive user input
-  const safeArgs = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a));
+  const safeArgs = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : a));
   logger[level](safeArgs.join(' '));
 }

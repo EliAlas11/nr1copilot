@@ -1,40 +1,40 @@
 // main.js - Modularized JS for Viral Clip Generator
 
 // Configuration
-const API_BASE_URL = "/api";
+const API_BASE_URL = '/api';
 let currentVideoId = null;
 let validationTimeout = null;
 let socket;
 
 // Theme management
 function setupTheme() {
-  const themeToggle = document.getElementById("themeToggle");
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
-  const savedTheme = localStorage.getItem("theme");
-  if (savedTheme === "dark" || (!savedTheme && prefersDark.matches)) {
-    document.body.classList.add("dark-mode");
+  const themeToggle = document.getElementById('themeToggle');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark' || (!savedTheme && prefersDark.matches)) {
+    document.body.classList.add('dark-mode');
     themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
   }
-  themeToggle.addEventListener("click", () => {
-    document.body.classList.toggle("dark-mode");
-    if (document.body.classList.contains("dark-mode")) {
-      localStorage.setItem("theme", "dark");
+  themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+    if (document.body.classList.contains('dark-mode')) {
+      localStorage.setItem('theme', 'dark');
       themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
     } else {
-      localStorage.setItem("theme", "light");
+      localStorage.setItem('theme', 'light');
       themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
     }
   });
 }
 
 // Notification system
-function showNotification(message, type = "info") {
-  const notification = document.createElement("div");
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   notification.textContent = message;
   document.body.appendChild(notification);
   setTimeout(() => {
-    notification.style.animation = "fadeOut 0.3s ease-out";
+    notification.style.animation = 'fadeOut 0.3s ease-out';
     setTimeout(() => {
       if (notification.parentNode) {
         notification.parentNode.removeChild(notification);
@@ -44,23 +44,23 @@ function showNotification(message, type = "info") {
 }
 
 // Progress management
-function updateProgress(percent, text = "") {
-  const progressContainer = document.getElementById("progressContainer");
-  const progressFill = document.getElementById("progressFill");
-  const progressText = document.getElementById("progressText");
+function updateProgress(percent, text = '') {
+  const progressContainer = document.getElementById('progressContainer');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
   if (percent > 0) {
-    progressContainer.style.display = "block";
-    progressFill.style.width = percent + "%";
+    progressContainer.style.display = 'block';
+    progressFill.style.width = percent + '%';
     progressText.textContent = text || `${percent}%`;
   } else {
-    progressContainer.style.display = "none";
+    progressContainer.style.display = 'none';
   }
 }
 
 // Enhanced YouTube ID extraction
 function extractVideoId(url) {
-  if (!url || typeof url !== "string") return null;
-  url = url.trim().replace(/\s+/g, "");
+  if (!url || typeof url !== 'string') return null;
+  url = url.trim().replace(/\s+/g, '');
   if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
   const patterns = [
     /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
@@ -78,45 +78,45 @@ function extractVideoId(url) {
 
 // Enhanced URL validation with visual feedback
 function setupURLValidation() {
-  const urlInput = document.getElementById("youtubeUrl");
-  const validationStatus = document.getElementById("validationStatus");
-  const validationText = document.getElementById("validationText");
-  urlInput.addEventListener("input", function () {
+  const urlInput = document.getElementById('youtubeUrl');
+  const validationStatus = document.getElementById('validationStatus');
+  const validationText = document.getElementById('validationText');
+  urlInput.addEventListener('input', function () {
     const url = this.value.trim();
     if (validationTimeout) clearTimeout(validationTimeout);
     if (!url) {
-      validationStatus.style.display = "none";
-      this.style.borderColor = "";
+      validationStatus.style.display = 'none';
+      this.style.borderColor = '';
       return;
     }
     const videoId = extractVideoId(url);
     if (url.length > 10 && !videoId) {
-      showValidationStatus("invalid", "Invalid YouTube URL format");
-      this.style.borderColor = "#fd746c";
+      showValidationStatus('invalid', 'Invalid YouTube URL format');
+      this.style.borderColor = '#fd746c';
     } else if (videoId) {
-      showValidationStatus("valid", "Valid YouTube URL detected");
-      this.style.borderColor = "#4facfe";
+      showValidationStatus('valid', 'Valid YouTube URL detected');
+      this.style.borderColor = '#4facfe';
       // Server validation with debounce
       validationTimeout = setTimeout(async () => {
         try {
           const response = await fetch(`${API_BASE_URL}/validate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: url }),
           });
           const data = await response.json();
           if (data.success && data.isValid) {
-            showValidationStatus("valid", "Video is accessible and ready for processing");
-            this.style.borderColor = "#00f2fe";
+            showValidationStatus('valid', 'Video is accessible and ready for processing');
+            this.style.borderColor = '#00f2fe';
           } else if (data.warning) {
-            showValidationStatus("warning", data.warning);
-            this.style.borderColor = "#fee140";
+            showValidationStatus('warning', data.warning);
+            this.style.borderColor = '#fee140';
           } else {
-            showValidationStatus("invalid", data.error || "Video may not be accessible");
-            this.style.borderColor = "#fd746c";
+            showValidationStatus('invalid', data.error || 'Video may not be accessible');
+            this.style.borderColor = '#fd746c';
           }
         } catch (error) {
-          console.warn("Real-time validation failed:", error);
+          console.warn('Real-time validation failed:', error);
         }
       }, 1000);
     }
@@ -124,34 +124,40 @@ function setupURLValidation() {
 }
 
 function showValidationStatus(type, message) {
-  const validationStatus = document.getElementById("validationStatus");
-  const validationText = document.getElementById("validationText");
+  const validationStatus = document.getElementById('validationStatus');
+  const validationText = document.getElementById('validationText');
   validationStatus.className = `validation-status ${type}`;
-  validationStatus.style.display = "flex";
+  validationStatus.style.display = 'flex';
   validationText.textContent = message;
-  const icon = validationStatus.querySelector("i");
+  const icon = validationStatus.querySelector('i');
   switch (type) {
-    case "valid": icon.className = "fas fa-check-circle"; break;
-    case "invalid": icon.className = "fas fa-times-circle"; break;
-    case "warning": icon.className = "fas fa-exclamation-triangle"; break;
+    case 'valid':
+      icon.className = 'fas fa-check-circle';
+      break;
+    case 'invalid':
+      icon.className = 'fas fa-times-circle';
+      break;
+    case 'warning':
+      icon.className = 'fas fa-exclamation-triangle';
+      break;
   }
 }
 
 // Enhanced video info display
 async function showVideoInfo(videoId) {
-  const videoInfoDiv = document.getElementById("videoInfo");
+  const videoInfoDiv = document.getElementById('videoInfo');
   try {
     videoInfoDiv.innerHTML = `<h3><i class="fas fa-spinner fa-spin"></i> Loading Video Information...</h3>`;
-    videoInfoDiv.style.display = "block";
+    videoInfoDiv.style.display = 'block';
     const response = await fetch(`${API_BASE_URL}/info/${videoId}`);
     let info = await response.json();
     if (response.ok && info && info.success) {
       const minutes = Math.floor(info.duration / 60);
-      const seconds = (info.duration % 60).toString().padStart(2, "0");
+      const seconds = (info.duration % 60).toString().padStart(2, '0');
       videoInfoDiv.innerHTML = `
         <h3><i class="fas fa-info-circle"></i> Video Information</h3>
-        <p><strong>Title:</strong> ${info.title || "Unknown Title"}</p>
-        <p><strong>Author:</strong> ${info.author || "Unknown Author"}</p>
+        <p><strong>Title:</strong> ${info.title || 'Unknown Title'}</p>
+        <p><strong>Author:</strong> ${info.author || 'Unknown Author'}</p>
         <p><strong>Duration:</strong> ${minutes}:${seconds}</p>
         <p><strong>Views:</strong> ${parseInt(info.viewCount || 0).toLocaleString()}</p>
         <div style="margin-top: 15px; padding: 10px; background: rgba(79, 172, 254, 0.1); border-radius: 8px; color: #4facfe;">
@@ -159,7 +165,8 @@ async function showVideoInfo(videoId) {
         </div>
       `;
     } else {
-      const errorMessage = (info && info.error) || `Failed to get video information (Status: ${response.status})`;
+      const errorMessage =
+        (info && info.error) || `Failed to get video information (Status: ${response.status})`;
       throw new Error(errorMessage);
     }
   } catch (error) {
@@ -182,38 +189,38 @@ async function showVideoInfo(videoId) {
 
 // Main processing function
 async function processVideo() {
-  const url = document.getElementById("youtubeUrl").value.trim();
+  const url = document.getElementById('youtubeUrl').value.trim();
   if (!url) {
-    showNotification("Please enter a YouTube video URL", "error");
+    showNotification('Please enter a YouTube video URL', 'error');
     return;
   }
   const videoId = extractVideoId(url);
   if (!videoId) {
-    showNotification("Invalid YouTube URL format", "error");
+    showNotification('Invalid YouTube URL format', 'error');
     return;
   }
   setLoadingState(true);
   try {
-    updateProgress(10, "Validating video...");
+    updateProgress(10, 'Validating video...');
     const validateResponse = await fetch(`${API_BASE_URL}/validate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: url }),
     });
     const validateData = await validateResponse.json();
     if (!validateData.success || !validateData.isValid) {
-      throw new Error(validateData.error || validateData.warning || "Video validation failed");
+      throw new Error(validateData.error || validateData.warning || 'Video validation failed');
     }
     currentVideoId = validateData.videoId;
-    updateProgress(15, "Getting video information...");
+    updateProgress(15, 'Getting video information...');
     await showVideoInfo(currentVideoId);
     // Simulate progress
     const progressStages = [
-      { percent: 25, text: "Preparing download..." },
-      { percent: 40, text: "Downloading video..." },
-      { percent: 60, text: "Analyzing content..." },
-      { percent: 80, text: "Creating viral clip..." },
-      { percent: 95, text: "Finalizing..." },
+      { percent: 25, text: 'Preparing download...' },
+      { percent: 40, text: 'Downloading video...' },
+      { percent: 60, text: 'Analyzing content...' },
+      { percent: 80, text: 'Creating viral clip...' },
+      { percent: 95, text: 'Finalizing...' },
     ];
     let stageIndex = 0;
     const progressInterval = setInterval(() => {
@@ -227,8 +234,8 @@ async function processVideo() {
     }, 3000);
     // Process video
     const response = await fetch(`${API_BASE_URL}/process`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoId: currentVideoId, url: url }),
     });
     let data = await response.json();
@@ -237,42 +244,42 @@ async function processVideo() {
       const errorMessage = (data && data.error) || `Processing failed (Status: ${response.status})`;
       throw new Error(errorMessage);
     }
-    updateProgress(100, "Complete!");
+    updateProgress(100, 'Complete!');
     setTimeout(() => {
       showVideoResult(data);
       updateProgress(0);
     }, 1000);
   } catch (error) {
     updateProgress(0);
-    showError(error.message || "Unknown error occurred during processing");
-    showNotification(error.message || "Unknown error", "error");
+    showError(error.message || 'Unknown error occurred during processing');
+    showNotification(error.message || 'Unknown error', 'error');
   } finally {
     setLoadingState(false);
   }
 }
 
 function setLoadingState(isLoading) {
-  const processBtn = document.getElementById("processBtn");
-  const exampleBtn = document.getElementById("exampleBtn");
-  const loader = document.getElementById("loader");
+  const processBtn = document.getElementById('processBtn');
+  const exampleBtn = document.getElementById('exampleBtn');
+  const loader = document.getElementById('loader');
   processBtn.disabled = isLoading;
   exampleBtn.disabled = isLoading;
   if (isLoading) {
     processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Processing...</span>';
-    loader.style.display = "block";
+    loader.style.display = 'block';
   } else {
     processBtn.innerHTML = '<i class="fas fa-magic"></i><span>Create Viral Clip</span>';
-    loader.style.display = "none";
+    loader.style.display = 'none';
   }
 }
 
 function showVideoResult(data) {
-  const resultDiv = document.getElementById("result");
+  const resultDiv = document.getElementById('result');
   const videoUrl = window.location.origin + data.url;
   resultDiv.innerHTML = `
     <div class="result-success">
       <h2><i class="fas fa-check-circle" aria-label="Success"></i> Your Viral Clip is Ready!</h2>
-      ${data.originalTitle ? `<p style="margin: 15px 0;"><strong>From:</strong> ${data.originalTitle}</p>` : ""}
+      ${data.originalTitle ? `<p style="margin: 15px 0;"><strong>From:</strong> ${data.originalTitle}</p>` : ''}
       <div class="video-container">
         <video controls preload="metadata" playsinline aria-label="Processed viral video">
           <source src="${videoUrl}" type="video/mp4">
@@ -296,13 +303,13 @@ function showVideoResult(data) {
       </div>
     </div>
   `;
-  resultDiv.style.display = "block";
-  resultDiv.scrollIntoView({ behavior: "smooth" });
-  showNotification("Viral clip created successfully!", "success");
+  resultDiv.style.display = 'block';
+  resultDiv.scrollIntoView({ behavior: 'smooth' });
+  showNotification('Viral clip created successfully!', 'success');
 }
 
 function showError(message) {
-  const resultDiv = document.getElementById("result");
+  const resultDiv = document.getElementById('result');
   resultDiv.innerHTML = `
     <div class="result-error">
       <h2><i class="fas fa-exclamation-triangle"></i> Error</h2>
@@ -316,13 +323,13 @@ function showError(message) {
       </div>
     </div>
   `;
-  resultDiv.style.display = "block";
-  resultDiv.scrollIntoView({ behavior: "smooth" });
+  resultDiv.style.display = 'block';
+  resultDiv.scrollIntoView({ behavior: 'smooth' });
 }
 
 function showExample() {
-  const resultDiv = document.getElementById("result");
-  const videoUrl = "/api/videos/sample";
+  const resultDiv = document.getElementById('result');
+  const videoUrl = '/api/videos/sample';
   resultDiv.innerHTML = `
     <div class="result-success">
       <h2><i class="fas fa-play" aria-label="Example"></i> Example Viral Clip</h2>
@@ -341,20 +348,22 @@ function showExample() {
       </div>
     </div>
   `;
-  resultDiv.style.display = "block";
-  resultDiv.scrollIntoView({ behavior: "smooth" });
-  showNotification("Example viral clip loaded!", "success");
+  resultDiv.style.display = 'block';
+  resultDiv.scrollIntoView({ behavior: 'smooth' });
+  showNotification('Example viral clip loaded!', 'success');
 }
 
 function shareVideo(videoUrl) {
   if (navigator.share) {
-    navigator.share({
-      title: "Check out this viral clip!",
-      text: "I created this amazing viral clip!",
-      url: videoUrl,
-    }).catch((error) => {
-      fallbackShare(videoUrl);
-    });
+    navigator
+      .share({
+        title: 'Check out this viral clip!',
+        text: 'I created this amazing viral clip!',
+        url: videoUrl,
+      })
+      .catch((error) => {
+        fallbackShare(videoUrl);
+      });
   } else {
     fallbackShare(videoUrl);
   }
@@ -362,31 +371,34 @@ function shareVideo(videoUrl) {
 
 function fallbackShare(videoUrl) {
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(videoUrl).then(() => {
-      showNotification("Video URL copied to clipboard!", "success");
-    }).catch(() => {
-      showNotification(`Share this URL: ${videoUrl}`, "info");
-    });
+    navigator.clipboard
+      .writeText(videoUrl)
+      .then(() => {
+        showNotification('Video URL copied to clipboard!', 'success');
+      })
+      .catch(() => {
+        showNotification(`Share this URL: ${videoUrl}`, 'info');
+      });
   } else {
-    showNotification(`Share this URL: ${videoUrl}`, "info");
+    showNotification(`Share this URL: ${videoUrl}`, 'info');
   }
 }
 
 // Keyboard shortcuts
 function setupKeyboardShortcuts() {
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" && e.target.id === "youtubeUrl") {
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.id === 'youtubeUrl') {
       e.preventDefault();
       processVideo();
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       processVideo();
     }
-    if (e.key === "Escape") {
-      const resultDiv = document.getElementById("result");
-      if (resultDiv.style.display === "block") {
-        resultDiv.style.display = "none";
+    if (e.key === 'Escape') {
+      const resultDiv = document.getElementById('result');
+      if (resultDiv.style.display === 'block') {
+        resultDiv.style.display = 'none';
         updateProgress(0);
       }
     }
@@ -394,45 +406,64 @@ function setupKeyboardShortcuts() {
 }
 
 // Modal management
-function showModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; }
-function showAuthModal() { showModal('authModal'); }
-function showHelpModal() { showModal('helpModal'); }
-function showFeedbackModal() { showModal('feedbackModal'); }
-function showPrivacyModal() { showModal('privacyModal'); }
-function showTOSModal() { showModal('tosModal'); }
-function showCustomizeModal() { showModal('customizeModal'); }
+function showModal(id) {
+  document.getElementById(id).style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  document.getElementById(id).style.display = 'none';
+  document.body.style.overflow = '';
+}
+function showAuthModal() {
+  showModal('authModal');
+}
+function showHelpModal() {
+  showModal('helpModal');
+}
+function showFeedbackModal() {
+  showModal('feedbackModal');
+}
+function showPrivacyModal() {
+  showModal('privacyModal');
+}
+function showTOSModal() {
+  showModal('tosModal');
+}
+function showCustomizeModal() {
+  showModal('customizeModal');
+}
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   setupTheme();
   setupURLValidation();
   setupKeyboardShortcuts();
   // Auth form (stub)
-  document.getElementById('authForm').onsubmit = function(e) {
+  document.getElementById('authForm').onsubmit = function (e) {
     e.preventDefault();
     showNotification('Login/Signup is not yet implemented.', 'warning');
     closeModal('authModal');
   };
   // Feedback form (stub)
-  document.getElementById('feedbackForm').onsubmit = function(e) {
+  document.getElementById('feedbackForm').onsubmit = function (e) {
     e.preventDefault();
     showNotification('Thank you for your feedback!', 'success');
     closeModal('feedbackModal');
   };
   // Customize form (stub)
-  document.getElementById('customizeForm').onsubmit = function(e) {
+  document.getElementById('customizeForm').onsubmit = function (e) {
     e.preventDefault();
     showNotification('Customization applied (not yet functional).', 'info');
     closeModal('customizeModal');
   };
   // Dashboard (stub)
-  document.getElementById('dashboardBtn').onclick = function() {
+  document.getElementById('dashboardBtn').onclick = function () {
     document.getElementById('dashboardSection').style.display = 'block';
-    document.getElementById('dashboardContent').innerHTML = '<p>Analytics and usage stats coming soon.</p>';
-    window.scrollTo({top:0,behavior:'smooth'});
+    document.getElementById('dashboardContent').innerHTML =
+      '<p>Analytics and usage stats coming soon.</p>';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   // Language selector (stub)
-  document.getElementById('languageSelect').onchange = function() {
+  document.getElementById('languageSelect').onchange = function () {
     showNotification('Language switching is not yet implemented.', 'info');
   };
   // PWA install prompt (stub)
@@ -442,17 +473,23 @@ document.addEventListener('DOMContentLoaded', function() {
     deferredPrompt = e;
     document.getElementById('pwaPrompt').style.display = 'block';
   });
-  document.getElementById('pwaPrompt')?.querySelector('.btn-primary')?.addEventListener('click', function() {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then(() => {
-        document.getElementById('pwaPrompt').style.display = 'none';
-      });
-    }
-  });
-  document.getElementById('pwaPrompt')?.querySelector('.btn-link')?.addEventListener('click', function() {
-    document.getElementById('pwaPrompt').style.display = 'none';
-  });
+  document
+    .getElementById('pwaPrompt')
+    ?.querySelector('.btn-primary')
+    ?.addEventListener('click', function () {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => {
+          document.getElementById('pwaPrompt').style.display = 'none';
+        });
+      }
+    });
+  document
+    .getElementById('pwaPrompt')
+    ?.querySelector('.btn-link')
+    ?.addEventListener('click', function () {
+      document.getElementById('pwaPrompt').style.display = 'none';
+    });
   // Offline notice
   window.addEventListener('offline', () => {
     document.getElementById('offlineNotice').style.display = 'block';
@@ -461,13 +498,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('offlineNotice').style.display = 'none';
   });
   // Add customize button to main actions
-  (function addCustomizeBtn(){
+  (function addCustomizeBtn() {
     const nav = document.querySelector('.buttons');
-    if(nav && !document.getElementById('customizeBtn')){
+    if (nav && !document.getElementById('customizeBtn')) {
       const btn = document.createElement('button');
       btn.className = 'btn btn-secondary';
       btn.id = 'customizeBtn';
-      btn.setAttribute('aria-label','Customize Clip');
+      btn.setAttribute('aria-label', 'Customize Clip');
       btn.innerHTML = '<i class="fas fa-sliders-h" aria-hidden="true"></i> <span>Customize</span>';
       btn.onclick = showCustomizeModal;
       nav.insertBefore(btn, nav.children[1]);

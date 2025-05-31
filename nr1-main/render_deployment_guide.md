@@ -152,15 +152,12 @@ If deploying publicly, use a reverse proxy (like Nginx) to enable HTTPS.
   - Use a logging service (e.g., Loggly, Papertrail, Datadog) or redirect logs to a file for easier monitoring and debugging.
   - To log to a file, you can use the `morgan` middleware in your `server.js`:
     ```js
-    const morgan = require("morgan");
-    const fs = require("fs");
-    const path = require("path");
-    if (process.env.NODE_ENV === "production") {
-      const logStream = fs.createWriteStream(
-        path.join(__dirname, "server.log"),
-        { flags: "a" },
-      );
-      app.use(morgan("combined", { stream: logStream }));
+    const morgan = require('morgan');
+    const fs = require('fs');
+    const path = require('path');
+    if (process.env.NODE_ENV === 'production') {
+      const logStream = fs.createWriteStream(path.join(__dirname, 'server.log'), { flags: 'a' });
+      app.use(morgan('combined', { stream: logStream }));
     }
     ```
   - On Render.com, you can also view logs in the Render dashboard under the "Logs" tab for your service.

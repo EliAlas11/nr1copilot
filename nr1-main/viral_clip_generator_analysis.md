@@ -21,11 +21,7 @@ The application consists of a single, straightforward HTML page with the followi
     <div class="container">
       <h1>🔥 Viral Clip Generator</h1>
       <p>Paste YouTube URL to create viral clips for TikTok/Reels/Shorts</p>
-      <input
-        type="text"
-        id="youtubeUrl"
-        placeholder="https://www.youtube.com/watch?v=..."
-      />
+      <input type="text" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." />
       <button onclick="processVideo()">✨ Make Viral!</button>
       <div class="loader" id="loader"></div>
       <div class="result" id="result"></div>
@@ -51,15 +47,15 @@ The application consists of a single, straightforward HTML page with the followi
 
 ```javascript
 async function processVideo() {
-  const url = document.getElementById("youtubeUrl").value;
-  if (!url) return alert("Please enter a YouTube URL");
-  const loader = document.getElementById("loader");
-  const resultDiv = document.getElementById("result");
-  loader.style.display = "block";
-  resultDiv.innerHTML = "";
+  const url = document.getElementById('youtubeUrl').value;
+  if (!url) return alert('Please enter a YouTube URL');
+  const loader = document.getElementById('loader');
+  const resultDiv = document.getElementById('result');
+  loader.style.display = 'block';
+  resultDiv.innerHTML = '';
   try {
     const videoId = getYouTubeId(url);
-    if (!videoId) throw new Error("Invalid YouTube URL");
+    if (!videoId) throw new Error('Invalid YouTube URL');
     // Step 1: Download video (simulated)
     const videoBuffer = await fetchVideo(videoId);
     // Step 2: Find interesting moments (simulated)
@@ -78,7 +74,7 @@ async function processVideo() {
   } catch (error) {
     resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
   } finally {
-    loader.style.display = "none";
+    loader.style.display = 'none';
   }
 }
 ```
