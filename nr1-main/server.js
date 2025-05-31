@@ -84,7 +84,14 @@ const limiter = rateLimit({
   keyGenerator: (req) => req.ip || req.connection.remoteAddress || 'unknown',
   skip: (req) => req.path === '/health' || req.path.startsWith('/api/videos/') || req.method === 'OPTIONS',
 });
-app.use('/api', limiter);
+// Remove generic /api limiter, use only advanced per-route limiters for best practice modularity
+// app.use('/api', limiter); // Removed
+
+// Add request logging for observability
+app.use((req, res, next) => {
+  logWithLevel('info', `[REQUEST]`, req.method, req.originalUrl, 'from', req.ip);
+  next();
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
