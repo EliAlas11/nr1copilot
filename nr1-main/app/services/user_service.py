@@ -111,6 +111,26 @@ def login_service(user: UserLogin) -> UserOut:
     logger.info(f"AUDIT: login_service: User authenticated: {user.email}")
     return UserOut(id=db_user["id"], email=db_user["email"], full_name=db_user["full_name"])
 
+def get_user_service(user_id: str) -> UserOut:
+    """
+    Retrieve a user by user ID. Raises UserError if not found.
+
+    Args:
+        user_id (str): The user's ID.
+
+    Returns:
+        UserOut: The user object.
+
+    Raises:
+        UserError: If user is not found.
+    """
+    user = get_user_by_id(user_id)
+    if not user:
+        logger.warning(f"AUDIT: get_user_service: User not found: {user_id}")
+        raise UserError(f"User with id {user_id} not found")
+    logger.info(f"AUDIT: get_user_service: User found: {user_id}")
+    return UserOut(id=user["id"], email=user["email"], full_name=user["full_name"])
+
 # Test block for service sanity (not for production)
 if __name__ == "__main__":
     try:
@@ -122,3 +142,4 @@ if __name__ == "__main__":
         print("User service test passed.")
     except Exception as e:
         print(f"Error: {e}")
+
