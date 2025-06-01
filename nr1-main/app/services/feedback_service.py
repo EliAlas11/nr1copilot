@@ -8,13 +8,17 @@ Feedback Service Layer
 - TODO: Replace in-memory store with persistent database for production.
 """
 
-from typing import List, Dict, Any
+from typing import List
 from app.schemas import FeedbackIn, FeedbackOut
 from datetime import datetime, timezone
 
+class FeedbackError(Exception):
+    """Custom exception for feedback service errors."""
+    pass
+
 _fake_feedback_db: List[FeedbackOut] = []
 
-def submit_feedback_service(feedback: FeedbackIn) -> Dict[str, Any]:
+def submit_feedback_service(feedback: FeedbackIn) -> FeedbackOut:
     """
     Submit user feedback.
 
@@ -22,8 +26,13 @@ def submit_feedback_service(feedback: FeedbackIn) -> Dict[str, Any]:
         feedback (FeedbackIn): Feedback data.
 
     Returns:
-        dict[str, Any]: On success: {"message": str, "data": FeedbackOut}. On error: {"error": str}.
+        FeedbackOut: The created feedback object.
+
+    Raises:
+        FeedbackError: If feedback is invalid or cannot be saved.
     """
+    if not feedback.message or len(feedback.message.strip()) == 0:
+        raise FeedbackError("Feedback message cannot be empty.")
     feedback_id = str(len(_fake_feedback_db) + 1)
     feedback_obj = FeedbackOut(
         id=feedback_id,
@@ -32,7 +41,7 @@ def submit_feedback_service(feedback: FeedbackIn) -> Dict[str, Any]:
         created_at=datetime.now(timezone.utc).isoformat()
     )
     _fake_feedback_db.append(feedback_obj)
-    return {"message": "Feedback submitted", "data": feedback_obj}
+    return feedback_obj
 
 def get_feedback_service() -> List[FeedbackOut]:
     """
