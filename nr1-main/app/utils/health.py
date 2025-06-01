@@ -1,8 +1,14 @@
-from fastapi.responses import JSONResponse
+"""
+Health check utilities for FastAPI application.
+Provides health and dependency status endpoints.
+"""
+
 from . import runtime
 import os
+from typing import Any, Dict
 
-def health_check():
+def health_check() -> Dict[str, Any]:
+    """Return basic health status and environment info."""
     return {
         "status": "ok",
         "environment": runtime.get_env(),
@@ -19,7 +25,8 @@ def health_check():
         }
     }
 
-def dependencies_check():
+def dependencies_check() -> Dict[str, Any]:
+    """Return status of external dependencies (stubbed for now)."""
     # TODO: Add real checks for MongoDB, Redis, FFmpeg, etc.
     return {
         "status": "ok",
