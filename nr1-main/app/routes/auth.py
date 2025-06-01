@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from app.schemas import UserCreate, UserLogin, Token, Message
 from ..controllers.auth_controller import signup, login, refresh_token
 
@@ -19,7 +19,7 @@ def login_route(user: UserLogin):
     return Token(**result)
 
 @router.post("/refresh", response_model=Token)
-def refresh_route(token: str):
+def refresh_route(token: str = Body(..., embed=True)):
     result = refresh_token(token)
     if isinstance(result, dict) and "error" in result:
         raise HTTPException(status_code=401, detail=result["error"])
