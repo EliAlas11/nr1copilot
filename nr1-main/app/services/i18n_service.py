@@ -1,7 +1,9 @@
-def get_translations_service():
-    # TODO: Implement translation retrieval logic
-    return {"translations": {"en": "English only"}}
+from app.schemas import SetLanguageIn, SetLanguageOut, TranslationsOut
 
-def set_language_service(data):
+def get_translations_service() -> TranslationsOut:
+    # TODO: Implement translation retrieval logic
+    return TranslationsOut(translations={"en": "English only"})
+
+def set_language_service(data: SetLanguageIn) -> SetLanguageOut:
     # TODO: Implement language setting logic
-    return {"message": "Language set to English"}
+    return SetLanguageOut(message=f"Language set to {data.language}")
